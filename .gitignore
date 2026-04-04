@@ -1,0 +1,23 @@
+# ── Maven ────────────────────────────────────────────────
+target/
+
+# ── Fichiers sensibles (NE JAMAIS committer) ─────────────
+src/main/resources/db.properties
+src/main/resources/mail.properties
+
+# ── VS Code ──────────────────────────────────────────────
+.vscode/
+*.classpath
+*.project
+.settings/
+
+# ── IntelliJ (Raha IntellJ o ampiasana) ─────────────────────────────────
+.idea/
+*.iml
+
+# ── Système ──────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── Logs Tomcat ───────────────────────────────────────────
+*.log
