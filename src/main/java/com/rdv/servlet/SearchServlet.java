@@ -1,0 +1,61 @@
+package com.rdv.servlet;
+
+import java.io.IOException;
+import java.util.List;
+
+import com.rdv.model.Medecin;
+import com.rdv.service.MedecinService;
+
+import jakarta.servlet.ServletException;
+import jakarta.servlet.annotation.WebServlet;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+
+/**
+ * Gère la recherche de médecins.
+ * URL : /search
+ *
+ * GET  q=..            → recherche par nom (LIKE %q%)
+ * GET  specialite=..   → filtrer par spécialité
+ * GET  (rien)          → afficher tous les médecins
+ */
+@WebServlet("/search")
+public class SearchServlet extends HttpServlet {
+
+    private final MedecinService medecinService = new MedecinService();
+
+    @Override
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp)
+            throws ServletException, IOException {
+
+        req.setCharacterEncoding("UTF-8");
+
+        String motCle     = req.getParameter("q");
+        String specialite = req.getParameter("specialite");
+
+        List<Medecin> resultats;
+
+        if (specialite != null && !specialite.trim().isEmpty()) {
+            // Filtrer par spécialité
+            resultats = medecinService.listerParSpecialite(specialite.trim());
+            req.setAttribute("filtreSpecialite", specialite);
+
+        } else if (motCle != null && !motCle.trim().isEmpty()) {
+            // Recherche par nom LIKE %motCle%
+            resultats = medecinService.rechercherParNom(motCle.trim());
+            req.setAttribute("motCle", motCle);
+
+        } else {
+            // Afficher tous les médecins
+            resultats = medecinService.listerTous();
+        }
+
+        // Passer les résultats et les spécialités à la JSP
+        req.setAttribute("resultats",   resultats);
+        req.setAttribute("specialites", medecinService.listerSpecialites());
+
+        req.getRequestDispatcher("/views/medecin/search.jsp")
+           .forward(req, resp);
+    }
+}
