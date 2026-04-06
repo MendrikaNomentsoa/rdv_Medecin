@@ -1,11 +1,11 @@
 package com.rdv.service;
 
-import com.rdv.dao.RdvDAO;
-import com.rdv.model.Rdv;
-
 import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
 import java.util.List;
+
+import com.rdv.dao.RdvDAO;
+import com.rdv.model.Rdv;
 
 /**
  * Service pour la logique métier liée aux rendez-vous.
@@ -123,4 +123,55 @@ public class RdvService {
     public boolean supprimer(String idrdv) {
         return rdvDAO.supprimer(idrdv);
     }
+
+    // ── Modifier un RDV ───────────────────────────────────────────────────────
+    public String modifierRdv(String idRdv, String idmed, String dateRdvStr) {
+
+        if (idRdv == null || idRdv.trim().isEmpty())
+            return "Identifiant RDV invalide.";
+
+        LocalDateTime nouvelleDate;
+        try {
+            nouvelleDate = LocalDateTime.parse(dateRdvStr);
+        } catch (DateTimeParseException e) {
+            return "Format de date invalide.";
+        }
+
+        if (nouvelleDate.isBefore(LocalDateTime.now()))
+            return "Impossible de modifier un RDV dans le passé.";
+
+        // Vérifier que le nouveau créneau est libre (sauf pour ce RDV)
+        Rdv rdvActuel = rdvDAO.trouverParId(idRdv);
+        if (rdvActuel == null) return "Rendez-vous introuvable.";
+
+        // Si même date → pas besoin de vérifier
+        if (!rdvActuel.getDateRdv().equals(nouvelleDate)) {
+            if (!rdvDAO.estCreneauLibre(idmed, nouvelleDate))
+                return "Ce créneau est déjà réservé. Choisissez un autre horaire.";
+        }
+
+        boolean ok = rdvDAO.modifier(idRdv, nouvelleDate);
+        if (!ok) return "Erreur lors de la modification.";
+
+        // Envoyer mail de confirmation
+        try {
+            Rdv rdvMaj = rdvDAO.trouverParId(idRdv);
+            if (rdvMaj != null) mailService.envoyerConfirmation(rdvMaj);
+        } catch (Exception e) {
+            System.err.println("[RdvService] Mail modification non envoyé : " + e.getMessage());
+        }
+
+        return null;
+    }
+
+    // ── Heures prises par date ────────────────────────────────────────────────
+    public List<String> listerHeuresPrisesParDate(String idmed, String date, String idRdvExclu) {
+        return rdvDAO.listerHeuresPrisesParDate(idmed, date, idRdvExclu);
+    }
+
+    public List<String> listerHeuresPrisesParDate(String idmed, String date) {
+        return rdvDAO.listerHeuresPrisesParDate(idmed, date, null);
+    }
 }
+
+    

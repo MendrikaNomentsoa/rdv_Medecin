@@ -14,16 +14,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 
-/**
- * Gère les rendez-vous.
- * URL : /rdv
- *
- * GET  action=liste          → liste les RDV de l'utilisateur connecté
- * GET  action=form&idmed=..  → formulaire de prise de RDV
- * GET  action=horaires&idmed=.. → créneaux disponibles d'un médecin
- * GET  action=annuler&id=..  → annuler un RDV
- * POST action=prendre        → confirmer la prise de RDV
- */
 @WebServlet("/rdv")
 public class RdvServlet extends HttpServlet {
 
@@ -38,15 +28,20 @@ public class RdvServlet extends HttpServlet {
         String action = req.getParameter("action");
         if (action == null) action = "liste";
 
-        // Récupérer l'utilisateur connecté depuis la session
-        HttpSession session = req.getSession(false);
+        HttpSession session  = req.getSession(false);
         String role          = (String) session.getAttribute("role");
         String idUtilisateur = (String) session.getAttribute("idUtilisateur");
+
+        // Variables déclarées ici pour éviter les doublons dans le switch
+        String idmed;
+        String idRdv;
+        Rdv rdv;
+        List<Rdv> rdvs;
+        List<String> heuresPrises;
 
         switch (action) {
 
             case "liste":
-                List<Rdv> rdvs;
                 if ("medecin".equals(role)) {
                     rdvs = rdvService.listerParMedecin(idUtilisateur);
                 } else {
@@ -58,28 +53,67 @@ public class RdvServlet extends HttpServlet {
                 break;
 
             case "form":
-                String idmed = req.getParameter("idmed");
+                idmed = req.getParameter("idmed");
                 req.setAttribute("medecin", medecinService.trouverParId(idmed));
                 req.getRequestDispatcher("/views/rdv/form.jsp")
                    .forward(req, resp);
                 break;
 
+            case "edit":
+                idRdv = req.getParameter("id");
+                rdv   = rdvService.trouverParId(idRdv);
+                if (rdv == null) {
+                    resp.sendRedirect(req.getContextPath() + "/rdv?action=liste");
+                    return;
+                }
+                req.setAttribute("rdv",     rdv);
+                req.setAttribute("medecin", medecinService.trouverParId(rdv.getIdmed()));
+                req.getRequestDispatcher("/views/rdv/form.jsp")
+                   .forward(req, resp);
+                break;
+
             case "horaires":
-                String idmedH = req.getParameter("idmed");
-                req.setAttribute("medecin", medecinService.trouverParId(idmedH));
-                req.setAttribute("creneauxPris", rdvService.listerCreneauxPris(idmedH));
+                idmed = req.getParameter("idmed");
+                req.setAttribute("medecin",      medecinService.trouverParId(idmed));
+                req.setAttribute("creneauxPris", rdvService.listerCreneauxPris(idmed));
                 req.getRequestDispatcher("/views/rdv/horaires.jsp")
                    .forward(req, resp);
                 break;
 
             case "annuler":
-                String idRdv  = req.getParameter("id");
-                String erreur = rdvService.annulerRdv(idRdv);
-                if (erreur != null) {
-                    req.setAttribute("erreur", erreur);
+                idRdv = req.getParameter("id");
+                String erreurAnnul = rdvService.annulerRdv(idRdv);
+                if (erreurAnnul != null) {
+                    req.getSession().setAttribute("erreur", erreurAnnul);
                 }
                 resp.sendRedirect(req.getContextPath() + "/rdv?action=liste");
                 break;
+
+            case "supprimer":
+                if (!"medecin".equals(role)) {
+                    resp.sendRedirect(req.getContextPath() + "/rdv?action=liste");
+                    return;
+                }
+                idRdv = req.getParameter("id");
+                rdvService.supprimer(idRdv);
+                resp.sendRedirect(req.getContextPath() + "/rdv?action=liste");
+                break;
+
+            case "heuresPrises":
+                idmed        = req.getParameter("idmed");
+                String dateH = req.getParameter("date");
+                String idRdvExclu = req.getParameter("idrdv");
+                heuresPrises = rdvService.listerHeuresPrisesParDate(idmed, dateH, idRdvExclu);
+
+                resp.setContentType("application/json");
+                StringBuilder json = new StringBuilder("[");
+                for (int i = 0; i < heuresPrises.size(); i++) {
+                    json.append("\"").append(heuresPrises.get(i)).append("\"");
+                    if (i < heuresPrises.size() - 1) json.append(",");
+                }
+                json.append("]");
+                resp.getWriter().write(json.toString());
+                return;
 
             default:
                 resp.sendRedirect(req.getContextPath() + "/rdv?action=liste");
@@ -94,13 +128,21 @@ public class RdvServlet extends HttpServlet {
         String action = req.getParameter("action");
 
         if ("prendre".equals(action)) {
-            HttpSession session    = req.getSession(false);
-            String idUtilisateur   = (String) session.getAttribute("idUtilisateur");
+            HttpSession session  = req.getSession(false);
+            String idUtilisateur = (String) session.getAttribute("idUtilisateur");
+            String idmed         = req.getParameter("idmed");
+            String dateRdv       = req.getParameter("date_rdv");
+            String idRdv         = req.getParameter("idrdv"); // null si nouveau RDV
 
-            String idmed    = req.getParameter("idmed");
-            String dateRdv  = req.getParameter("date_rdv"); // format : 2026-04-10T09:00
+            String erreur;
 
-            String erreur = rdvService.prendreRdv(idmed, idUtilisateur, dateRdv);
+            if (idRdv != null && !idRdv.isEmpty()) {
+                // Modification d'un RDV existant
+                erreur = rdvService.modifierRdv(idRdv, idmed, dateRdv);
+            } else {
+                // Nouveau RDV
+                erreur = rdvService.prendreRdv(idmed, idUtilisateur, dateRdv);
+            }
 
             if (erreur != null) {
                 req.setAttribute("erreur", erreur);
@@ -110,7 +152,6 @@ public class RdvServlet extends HttpServlet {
                 return;
             }
 
-            req.setAttribute("succes", "Rendez-vous confirmé ! Un email vous a été envoyé.");
             resp.sendRedirect(req.getContextPath() + "/rdv?action=liste");
         }
     }

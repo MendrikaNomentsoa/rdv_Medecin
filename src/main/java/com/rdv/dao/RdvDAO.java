@@ -1,14 +1,18 @@
 package com.rdv.dao;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+
 import com.rdv.model.Medecin;
 import com.rdv.model.Patient;
 import com.rdv.model.Rdv;
 import com.rdv.util.DBConnection;
-
-import java.sql.*;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * DAO pour la table RDV.
@@ -258,4 +262,57 @@ public class RdvDAO {
 
         return rdv;
     }
+
+    // ── MODIFIER date d'un RDV ────────────────────────────────────────────────
+    public boolean modifier(String idrdv, LocalDateTime nouvelleDate) {
+        String sql = "UPDATE rdv SET date_rdv = ?, statut = 'CONFIRME' WHERE idrdv = ?";
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setTimestamp(1, Timestamp.valueOf(nouvelleDate));
+            ps.setString(2, idrdv);
+            return ps.executeUpdate() == 1;
+
+        } catch (SQLException e) {
+            if (e.getSQLState().equals("23505")) {
+                System.err.println("[RdvDAO] Créneau déjà réservé !");
+            } else {
+                System.err.println("[RdvDAO] Erreur modifier : " + e.getMessage());
+            }
+            return false;
+        }
+    }
+
+    // ── HEURES PRISES PAR DATE (avec exclusion du RDV en cours de modif) ─────
+    public List<String> listerHeuresPrisesParDate(String idmed, String date, String idRdvExclu) {
+        List<String> heures = new ArrayList<>();
+        String sql = "SELECT TO_CHAR(date_rdv, 'HH24:MI') as heure " +
+                     "FROM rdv " +
+                     "WHERE idmed = ? " +
+                     "AND DATE(date_rdv) = ? " +
+                     "AND statut = 'CONFIRME' " +
+                     (idRdvExclu != null ? "AND idrdv != ?" : "");
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, idmed);
+            ps.setDate(2, java.sql.Date.valueOf(date));
+            if (idRdvExclu != null) ps.setString(3, idRdvExclu);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    heures.add(rs.getString("heure"));
+                }
+            }
+
+        } catch (SQLException e) {
+            System.err.println("[RdvDAO] Erreur listerHeuresPrisesParDate : " + e.getMessage());
+        }
+        return heures;
+    }
+
 }
+
+    
