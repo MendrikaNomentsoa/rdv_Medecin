@@ -124,7 +124,6 @@ public class RdvService {
         return rdvDAO.supprimer(idrdv);
     }
 
-    // ── Modifier un RDV ───────────────────────────────────────────────────────
     public String modifierRdv(String idRdv, String idmed, String dateRdvStr) {
 
         if (idRdv == null || idRdv.trim().isEmpty())
@@ -140,25 +139,26 @@ public class RdvService {
         if (nouvelleDate.isBefore(LocalDateTime.now()))
             return "Impossible de modifier un RDV dans le passé.";
 
-        // Vérifier que le nouveau créneau est libre (sauf pour ce RDV)
         Rdv rdvActuel = rdvDAO.trouverParId(idRdv);
         if (rdvActuel == null) return "Rendez-vous introuvable.";
 
-        // Si même date → pas besoin de vérifier
+        // Vérifier créneau libre seulement si la date change
         if (!rdvActuel.getDateRdv().equals(nouvelleDate)) {
             if (!rdvDAO.estCreneauLibre(idmed, nouvelleDate))
                 return "Ce créneau est déjà réservé. Choisissez un autre horaire.";
         }
 
+        // modifier() remet automatiquement statut = CONFIRME
         boolean ok = rdvDAO.modifier(idRdv, nouvelleDate);
         if (!ok) return "Erreur lors de la modification.";
 
         // Envoyer mail de confirmation
+        // (que ce soit une modification ou une remise en confirmé)
         try {
             Rdv rdvMaj = rdvDAO.trouverParId(idRdv);
             if (rdvMaj != null) mailService.envoyerConfirmation(rdvMaj);
         } catch (Exception e) {
-            System.err.println("[RdvService] Mail modification non envoyé : " + e.getMessage());
+            System.err.println("[RdvService] Mail non envoyé : " + e.getMessage());
         }
 
         return null;

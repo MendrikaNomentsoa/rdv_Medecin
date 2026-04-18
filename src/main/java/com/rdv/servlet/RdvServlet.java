@@ -32,7 +32,6 @@ public class RdvServlet extends HttpServlet {
         String role          = (String) session.getAttribute("role");
         String idUtilisateur = (String) session.getAttribute("idUtilisateur");
 
-        // Variables déclarées ici pour éviter les doublons dans le switch
         String idmed;
         String idRdv;
         Rdv rdv;
@@ -55,6 +54,15 @@ public class RdvServlet extends HttpServlet {
             case "form":
                 idmed = req.getParameter("idmed");
                 req.setAttribute("medecin", medecinService.trouverParId(idmed));
+
+                // Passer date et heure seulement si présents (venant de horaires.jsp)
+                String dateParam  = req.getParameter("date");
+                String heureParam = req.getParameter("heure");
+                if (dateParam  != null && !dateParam.isEmpty())
+                    req.setAttribute("datePreselect",  dateParam);
+                if (heureParam != null && !heureParam.isEmpty())
+                    req.setAttribute("heurePreselect", heureParam);
+
                 req.getRequestDispatcher("/views/rdv/form.jsp")
                    .forward(req, resp);
                 break;
@@ -74,8 +82,7 @@ public class RdvServlet extends HttpServlet {
 
             case "horaires":
                 idmed = req.getParameter("idmed");
-                req.setAttribute("medecin",      medecinService.trouverParId(idmed));
-                req.setAttribute("creneauxPris", rdvService.listerCreneauxPris(idmed));
+                req.setAttribute("medecin", medecinService.trouverParId(idmed));
                 req.getRequestDispatcher("/views/rdv/horaires.jsp")
                    .forward(req, resp);
                 break;
@@ -90,11 +97,28 @@ public class RdvServlet extends HttpServlet {
                 break;
 
             case "supprimer":
-                if (!"medecin".equals(role)) {
+                idRdv = req.getParameter("id");
+                rdv   = rdvService.trouverParId(idRdv);
+
+                if (rdv == null) {
                     resp.sendRedirect(req.getContextPath() + "/rdv?action=liste");
                     return;
                 }
-                idRdv = req.getParameter("id");
+
+                // Patient ne peut supprimer que SES propres RDV
+                if ("patient".equals(role) &&
+                    !rdv.getIdpat().equals(idUtilisateur)) {
+                    resp.sendRedirect(req.getContextPath() + "/rdv?action=liste");
+                    return;
+                }
+
+                // Médecin ne peut supprimer que SES propres RDV
+                if ("medecin".equals(role) &&
+                    !rdv.getIdmed().equals(idUtilisateur)) {
+                    resp.sendRedirect(req.getContextPath() + "/rdv?action=liste");
+                    return;
+                }
+
                 rdvService.supprimer(idRdv);
                 resp.sendRedirect(req.getContextPath() + "/rdv?action=liste");
                 break;
@@ -103,7 +127,8 @@ public class RdvServlet extends HttpServlet {
                 idmed        = req.getParameter("idmed");
                 String dateH = req.getParameter("date");
                 String idRdvExclu = req.getParameter("idrdv");
-                heuresPrises = rdvService.listerHeuresPrisesParDate(idmed, dateH, idRdvExclu);
+                heuresPrises = rdvService.listerHeuresPrisesParDate(
+                                   idmed, dateH, idRdvExclu);
 
                 resp.setContentType("application/json");
                 StringBuilder json = new StringBuilder("[");
@@ -132,15 +157,13 @@ public class RdvServlet extends HttpServlet {
             String idUtilisateur = (String) session.getAttribute("idUtilisateur");
             String idmed         = req.getParameter("idmed");
             String dateRdv       = req.getParameter("date_rdv");
-            String idRdv         = req.getParameter("idrdv"); // null si nouveau RDV
+            String idRdv         = req.getParameter("idrdv");
 
             String erreur;
 
             if (idRdv != null && !idRdv.isEmpty()) {
-                // Modification d'un RDV existant
                 erreur = rdvService.modifierRdv(idRdv, idmed, dateRdv);
             } else {
-                // Nouveau RDV
                 erreur = rdvService.prendreRdv(idmed, idUtilisateur, dateRdv);
             }
 

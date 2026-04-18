@@ -83,35 +83,36 @@
                                         </c:otherwise>
                                     </c:choose>
                                 </td>
+
                                 <td style="text-align:center;">
-                                    <c:if test="${r.statut == 'CONFIRME'}">
+                                    <c:choose>
 
-                                        <%-- Modifier : patient et médecin --%>
-                                        <a href="${pageContext.request.contextPath}/rdv?action=edit&id=${r.idrdv}"
-                                           class="btn btn-warning"
-                                           style="padding:6px 12px; font-size:12px;">
-                                            Modifier
-                                        </a>
+                                        <%-- RDV CONFIRMÉ → Modifier + Annuler --%>
+                                        <c:when test="${r.statut == 'CONFIRME'}">
+                                            <a href="${pageContext.request.contextPath}/rdv?action=edit&id=${r.idrdv}"
+                                               class="btn btn-warning"
+                                               style="padding:6px 12px; font-size:12px;">
+                                                Modifier
+                                            </a>
+                                            <a href="${pageContext.request.contextPath}/rdv?action=annuler&id=${r.idrdv}"
+                                               class="btn btn-danger"
+                                               style="padding:6px 12px; font-size:12px;"
+                                               onclick="return confirm('Annuler ce rendez-vous ? Un email sera envoyé.')">
+                                                Annuler
+                                            </a>
+                                        </c:when>
 
-                                        <%-- Annuler : patient et médecin --%>
-                                        <a href="${pageContext.request.contextPath}/rdv?action=annuler&id=${r.idrdv}"
-                                           class="btn btn-danger"
-                                           style="padding:6px 12px; font-size:12px;"
-                                           onclick="return confirm('Annuler ce rendez-vous ?')">
-                                            Annuler
-                                        </a>
-
-                                        <%-- Supprimer : médecin uniquement --%>
-                                        <c:if test="${sessionScope.role == 'medecin'}">
+                                        <%-- RDV ANNULÉ → Supprimer uniquement --%>
+                                        <c:when test="${r.statut == 'ANNULE'}">
                                             <a href="${pageContext.request.contextPath}/rdv?action=supprimer&id=${r.idrdv}"
                                                class="btn btn-secondary"
                                                style="padding:6px 12px; font-size:12px;"
                                                onclick="return confirm('Supprimer définitivement ce RDV ?')">
                                                 Supprimer
                                             </a>
-                                        </c:if>
+                                        </c:when>
 
-                                    </c:if>
+                                    </c:choose>
                                 </td>
                             </tr>
                         </c:forEach>

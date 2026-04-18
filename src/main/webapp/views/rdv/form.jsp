@@ -5,9 +5,13 @@
 <div class="container">
     <div class="card" style="max-width:560px; margin:0 auto;">
 
-        <h2 class="card-title">Prendre un rendez-vous</h2>
+        <h2 class="card-title">
+            <c:choose>
+                <c:when test="${not empty rdv}">Modifier le rendez-vous</c:when>
+                <c:otherwise>Prendre un rendez-vous</c:otherwise>
+            </c:choose>
+        </h2>
 
-        <%-- Infos médecin --%>
         <c:if test="${not empty medecin}">
             <div style="background:#e8f0fe; border-radius:10px; padding:16px; margin-bottom:24px;">
                 <h3 style="color:#1a73e8; font-size:16px; margin-bottom:6px;">
@@ -25,76 +29,93 @@
             <div class="alert alert-danger">${erreur}</div>
         </c:if>
 
-        <%-- Formulaire avec date et heure séparées --%>
         <div id="step1">
 
             <div class="form-group">
-                <label>Date du rendez-vous</label>
+                <label>Choisir une date</label>
                 <input type="date" id="dateRdv"
-                       style="width:100%; padding:10px 14px; border:1px solid #ddd; border-radius:8px; font-size:14px;"
-                       required>
+                       onchange="chargerHeuresDisponibles(this.value)"
+                       style="width:100%; padding:10px 14px; border:1px solid #ddd;
+                              border-radius:8px; font-size:14px;" required>
             </div>
 
-            <div class="form-group">
-                <label>Heure du rendez-vous</label>
-                <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-top:6px;">
-                    <button type="button" class="heure-btn" data-heure="08:00"
-                            onclick="selectHeure(this)">08h00</button>
-                    <button type="button" class="heure-btn" data-heure="09:00"
-                            onclick="selectHeure(this)">09h00</button>
-                    <button type="button" class="heure-btn" data-heure="10:00"
-                            onclick="selectHeure(this)">10h00</button>
-                    <button type="button" class="heure-btn" data-heure="11:00"
-                            onclick="selectHeure(this)">11h00</button>
-                    <button type="button" class="heure-btn" data-heure="14:00"
-                            onclick="selectHeure(this)">14h00</button>
-                    <button type="button" class="heure-btn" data-heure="15:00"
-                            onclick="selectHeure(this)">15h00</button>
-                    <button type="button" class="heure-btn" data-heure="16:00"
-                            onclick="selectHeure(this)">16h00</button>
-                    <button type="button" class="heure-btn" data-heure="17:00"
-                            onclick="selectHeure(this)">17h00</button>
+            <div id="msgChoixDate"
+                 style="text-align:center; padding:20px; background:#f0f4f8;
+                        border-radius:8px; color:#888; font-size:14px; margin-bottom:16px;">
+                Choisissez d'abord une date pour voir les créneaux disponibles
+            </div>
+
+            <div id="grilleHeures" style="display:none; margin-bottom:16px;">
+                <label style="display:block; font-size:13px; font-weight:600;
+                               color:#555; margin-bottom:8px;">
+                    Choisir une heure
+                </label>
+                <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:10px;">
+                    <button type="button" class="heure-btn" data-heure="08:00" onclick="selectHeure(this)">08h00</button>
+                    <button type="button" class="heure-btn" data-heure="09:00" onclick="selectHeure(this)">09h00</button>
+                    <button type="button" class="heure-btn" data-heure="10:00" onclick="selectHeure(this)">10h00</button>
+                    <button type="button" class="heure-btn" data-heure="11:00" onclick="selectHeure(this)">11h00</button>
+                    <button type="button" class="heure-btn" data-heure="14:00" onclick="selectHeure(this)">14h00</button>
+                    <button type="button" class="heure-btn" data-heure="15:00" onclick="selectHeure(this)">15h00</button>
+                    <button type="button" class="heure-btn" data-heure="16:00" onclick="selectHeure(this)">16h00</button>
+                    <button type="button" class="heure-btn" data-heure="17:00" onclick="selectHeure(this)">17h00</button>
+                </div>
+                <div style="display:flex; gap:16px; margin-top:10px; font-size:12px; color:#666;">
+                    <span style="display:flex; align-items:center; gap:5px;">
+                        <span style="width:14px;height:14px;background:#1a73e8;
+                                     border-radius:3px;display:inline-block;"></span>
+                        Sélectionné
+                    </span>
+                    <span style="display:flex; align-items:center; gap:5px;">
+                        <span style="width:14px;height:14px;background:#fce8e6;
+                                     border:2px solid #ea4335;border-radius:3px;
+                                     display:inline-block;"></span>
+                        Déjà réservé
+                    </span>
+                    <span style="display:flex; align-items:center; gap:5px;">
+                        <span style="width:14px;height:14px;background:#f5f5f5;
+                                     border:1px solid #ccc;border-radius:3px;
+                                     display:inline-block;"></span>
+                        Heure passée
+                    </span>
+                    <span style="display:flex; align-items:center; gap:5px;">
+                        <span style="width:14px;height:14px;background:white;
+                                     border:2px solid #1a73e8;border-radius:3px;
+                                     display:inline-block;"></span>
+                        Disponible
+                    </span>
                 </div>
             </div>
 
-            <div style="display:flex; gap:12px; margin-top:20px;">
+            <div style="display:flex; gap:12px; margin-top:16px;">
                 <button type="button" onclick="afficherConfirmation()"
                         class="btn btn-primary" style="flex:1;">
                     Suivant →
                 </button>
-                <a href="${pageContext.request.contextPath}/search"
+                <a href="${pageContext.request.contextPath}/rdv?action=liste"
                    class="btn btn-secondary" style="flex:1; text-align:center;">
                     Annuler
                 </a>
             </div>
         </div>
 
-        <%-- Écran de confirmation --%>
         <div id="step2" style="display:none;">
-
             <div style="background:#e6f4ea; border-radius:10px; padding:20px; margin-bottom:20px;">
                 <h3 style="color:#137333; font-size:15px; margin-bottom:16px;">
-                    Récapitulatif de votre rendez-vous
+                    Récapitulatif du rendez-vous
                 </h3>
-
                 <table style="width:100%; font-size:14px;">
                     <tr>
                         <td style="padding:8px 0; color:#555; width:40%;">Médecin</td>
-                        <td style="padding:8px 0; font-weight:600;">
-                            Dr. ${medecin.nommed}
-                        </td>
+                        <td style="padding:8px 0; font-weight:600;">Dr. ${medecin.nommed}</td>
                     </tr>
                     <tr>
                         <td style="padding:8px 0; color:#555;">Spécialité</td>
-                        <td style="padding:8px 0; font-weight:600;">
-                            ${medecin.specialite}
-                        </td>
+                        <td style="padding:8px 0; font-weight:600;">${medecin.specialite}</td>
                     </tr>
                     <tr>
                         <td style="padding:8px 0; color:#555;">Lieu</td>
-                        <td style="padding:8px 0; font-weight:600;">
-                            ${medecin.lieu}
-                        </td>
+                        <td style="padding:8px 0; font-weight:600;">${medecin.lieu}</td>
                     </tr>
                     <tr style="border-top:2px solid #34a853;">
                         <td style="padding:10px 0; color:#137333; font-weight:600;">Date</td>
@@ -108,9 +129,7 @@
                     </tr>
                     <tr>
                         <td style="padding:8px 0; color:#555;">Taux</td>
-                        <td style="padding:8px 0; font-weight:600;">
-                            ${medecin.tauxHoraire} Ar/h
-                        </td>
+                        <td style="padding:8px 0; font-weight:600;">${medecin.tauxHoraire} Ar/h</td>
                     </tr>
                 </table>
             </div>
@@ -120,15 +139,18 @@
                 Un email de confirmation vous sera envoyé après validation.
             </div>
 
-            <%-- Formulaire caché qui sera soumis --%>
             <form action="${pageContext.request.contextPath}/rdv" method="post">
-                <input type="hidden" name="action"  value="prendre">
-                <input type="hidden" name="idmed"   value="${medecin.idmed}">
+                <input type="hidden" name="action"   value="prendre">
+                <input type="hidden" name="idmed"    value="${medecin.idmed}">
+                <input type="hidden" name="idrdv"    value="${rdv.idrdv}">
                 <input type="hidden" name="date_rdv" id="dateRdvFinal">
 
                 <div style="display:flex; gap:12px;">
                     <button type="submit" class="btn btn-success" style="flex:1;">
-                        Confirmer le rendez-vous
+                        <c:choose>
+                            <c:when test="${not empty rdv}">Confirmer la modification</c:when>
+                            <c:otherwise>Confirmer le rendez-vous</c:otherwise>
+                        </c:choose>
                     </button>
                     <button type="button" onclick="retourStep1()"
                             class="btn btn-secondary" style="flex:1;">
@@ -137,7 +159,6 @@
                 </div>
             </form>
         </div>
-
     </div>
 </div>
 
@@ -153,63 +174,139 @@
         cursor: pointer;
         transition: all 0.2s;
     }
-    .heure-btn:hover {
-        background: #e8f0fe;
+    .heure-btn:hover:not(.pris):not(.passe) { background: #e8f0fe; }
+
+    /* Bug 1 corrigé : rouge pour les heures déjà réservées */
+    .heure-btn.pris {
+        background: #fce8e6;
+        border-color: #ea4335;
+        color: #c5221f;
+        cursor: not-allowed;
+        text-decoration: line-through;
     }
+
+    /* Gris pour les heures passées */
+    .heure-btn.passe {
+        background: #f5f5f5;
+        border-color: #ccc;
+        color: #aaa;
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+
     .heure-btn.selected {
         background: #1a73e8;
         color: white;
-    }
-    .heure-btn.pris {
-        background: #f5f5f5;
-        border-color: #ddd;
-        color: #aaa;
-        cursor: not-allowed;
-        text-decoration: line-through;
+        border-color: #1a73e8;
     }
 </style>
 
 <script>
+    const idmed       = '${medecin.idmed}';
+    const idrdv       = '${rdv.idrdv}';
+    const contextPath = '${pageContext.request.contextPath}';
     let heureSelectionnee = null;
 
-    // Définir la date minimum = aujourd'hui
+    // Bug 2 corrigé : date minimum = aujourd'hui
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('dateRdv').min = today;
 
+    // CAS 1 : Modification RDV existant
+    <c:if test="${not empty rdv}">
+        const dateActuelle  = '${rdv.dateRdv}'.substring(0, 10);
+        const heureActuelle = '${rdv.dateRdv}'.substring(11, 16);
+        document.getElementById('dateRdv').value = dateActuelle;
+        chargerHeuresDisponibles(dateActuelle, heureActuelle);
+    </c:if>
+
+    // CAS 2 : Venant de horaires.jsp
+    <c:if test="${empty rdv}">
+        const datePreselect  = '${not empty datePreselect  ? datePreselect  : ""}';
+        const heurePreselect = '${not empty heurePreselect ? heurePreselect : ""}';
+        if (datePreselect !== '') {
+            document.getElementById('dateRdv').value = datePreselect;
+            chargerHeuresDisponibles(datePreselect, heurePreselect);
+        }
+    </c:if>
+
+    function chargerHeuresDisponibles(date, heureAPreselectionner) {
+        if (!date) return;
+
+        heureSelectionnee = null;
+        document.querySelectorAll('.heure-btn').forEach(b => {
+            b.classList.remove('selected', 'pris', 'passe');
+        });
+
+        const url = contextPath + '/rdv?action=heuresPrises&idmed=' + idmed
+                  + '&date=' + date
+                  + (idrdv ? '&idrdv=' + idrdv : '');
+
+        fetch(url)
+            .then(r => r.json())
+            .then(heuresPrises => {
+
+                // Heure actuelle pour bloquer les heures passées du jour
+                const maintenant   = new Date();
+                const estAujourdHui = (date === today);
+
+                document.querySelectorAll('.heure-btn').forEach(btn => {
+                    const heure = btn.getAttribute('data-heure');
+                    const [h, m] = heure.split(':').map(Number);
+
+                    // Bug 2 : bloquer les heures passées si c'est aujourd'hui
+                    const heurePassee = estAujourdHui &&
+                        (h < maintenant.getHours() ||
+                        (h === maintenant.getHours() && m <= maintenant.getMinutes()));
+
+                    if (heurePassee) {
+                        btn.classList.add('passe');
+                        btn.title = 'Heure déjà passée';
+
+                    } else if (heuresPrises.includes(heure)) {
+                        // Bug 1 : rouge pour les heures réservées
+                        btn.classList.add('pris');
+                        btn.title = 'Créneau déjà réservé';
+
+                    } else {
+                        btn.classList.remove('pris', 'passe');
+                        btn.title = 'Créneau disponible';
+
+                        // Pré-sélectionner si demandé
+                        if (heureAPreselectionner && heure === heureAPreselectionner) {
+                            btn.classList.add('selected');
+                            heureSelectionnee = heure;
+                        }
+                    }
+                });
+
+                document.getElementById('msgChoixDate').style.display = 'none';
+                document.getElementById('grilleHeures').style.display = 'block';
+            })
+            .catch(err => console.error('Erreur:', err));
+    }
+
     function selectHeure(btn) {
-        if (btn.classList.contains('pris')) return;
-        // Désélectionner tous
+        if (btn.classList.contains('pris') ||
+            btn.classList.contains('passe')) return;
         document.querySelectorAll('.heure-btn').forEach(b => b.classList.remove('selected'));
-        // Sélectionner celui cliqué
         btn.classList.add('selected');
         heureSelectionnee = btn.getAttribute('data-heure');
     }
 
     function afficherConfirmation() {
         const date = document.getElementById('dateRdv').value;
+        if (!date)              { alert('Veuillez choisir une date.'); return; }
+        if (!heureSelectionnee) { alert('Veuillez choisir une heure disponible.'); return; }
 
-        if (!date) {
-            alert('Veuillez choisir une date.');
-            return;
-        }
-        if (!heureSelectionnee) {
-            alert('Veuillez choisir une heure.');
-            return;
-        }
-
-        // Formater la date pour affichage (ex: Jeudi 10 avril 2026)
-        const dateObj = new Date(date + 'T00:00:00');
-        const options = { weekday:'long', year:'numeric', month:'long', day:'numeric' };
+        const dateObj      = new Date(date + 'T00:00:00');
+        const options      = { weekday:'long', year:'numeric',
+                               month:'long', day:'numeric' };
         const dateFormatee = dateObj.toLocaleDateString('fr-FR', options);
 
-        // Mettre à jour l'écran de confirmation
         document.getElementById('confirmDate').textContent  = dateFormatee;
         document.getElementById('confirmHeure').textContent = heureSelectionnee;
+        document.getElementById('dateRdvFinal').value       = date + 'T' + heureSelectionnee;
 
-        // Construire le datetime pour le serveur (format: 2026-04-10T09:00)
-        document.getElementById('dateRdvFinal').value = date + 'T' + heureSelectionnee;
-
-        // Passer à l'étape 2
         document.getElementById('step1').style.display = 'none';
         document.getElementById('step2').style.display = 'block';
     }
@@ -219,6 +316,5 @@
         document.getElementById('step2').style.display = 'none';
     }
 </script>
-
 </body>
 </html>
