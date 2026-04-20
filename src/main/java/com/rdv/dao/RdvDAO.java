@@ -14,17 +14,11 @@ import com.rdv.model.Patient;
 import com.rdv.model.Rdv;
 import com.rdv.util.DBConnection;
 
-/**
- * DAO pour la table RDV.
- * Toutes les requêtes SQL liées aux rendez-vous sont ici.
- */
 public class RdvDAO {
-
-    // ── CREATE ───────────────────────────────────────────────────────────────
 
     public boolean inserer(Rdv rdv) {
         String sql = "INSERT INTO rdv (idmed, idpat, date_rdv, statut) " +
-                     "VALUES (?, ?, ?, ?)";
+                "VALUES (?, ?, ?, ?)";
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -37,7 +31,6 @@ public class RdvDAO {
             return ps.executeUpdate() == 1;
 
         } catch (SQLException e) {
-            // Si le créneau est déjà pris → violation de la contrainte UNIQUE
             if (e.getSQLState().equals("23505")) {
                 System.err.println("[RdvDAO] Créneau déjà réservé !");
             } else {
@@ -47,17 +40,15 @@ public class RdvDAO {
         }
     }
 
-    // ── READ ─────────────────────────────────────────────────────────────────
-
     public List<Rdv> listerTous() {
         List<Rdv> liste = new ArrayList<>();
         String sql = "SELECT r.idrdv, r.idmed, r.idpat, r.date_rdv, r.statut, " +
-                     "m.nommed, m.specialite, m.lieu, " +
-                     "p.nom_pat, p.email " +
-                     "FROM rdv r " +
-                     "JOIN medecin m ON r.idmed = m.idmed " +
-                     "JOIN patient p ON r.idpat = p.idpat " +
-                     "ORDER BY r.date_rdv DESC";
+                "m.nommed, m.specialite, m.lieu, m.email as email_medecin, " +
+                "p.nom_pat, p.email as email_patient " +
+                "FROM rdv r " +
+                "JOIN medecin m ON r.idmed = m.idmed " +
+                "JOIN patient p ON r.idpat = p.idpat " +
+                "ORDER BY r.date_rdv DESC";
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql);
@@ -75,12 +66,12 @@ public class RdvDAO {
 
     public Rdv trouverParId(String idrdv) {
         String sql = "SELECT r.idrdv, r.idmed, r.idpat, r.date_rdv, r.statut, " +
-                     "m.nommed, m.specialite, m.lieu, " +
-                     "p.nom_pat, p.email " +
-                     "FROM rdv r " +
-                     "JOIN medecin m ON r.idmed = m.idmed " +
-                     "JOIN patient p ON r.idpat = p.idpat " +
-                     "WHERE r.idrdv = ?";
+                "m.nommed, m.specialite, m.lieu, m.email as email_medecin, " +
+                "p.nom_pat, p.email as email_patient " +
+                "FROM rdv r " +
+                "JOIN medecin m ON r.idmed = m.idmed " +
+                "JOIN patient p ON r.idpat = p.idpat " +
+                "WHERE r.idrdv = ?";
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -96,18 +87,16 @@ public class RdvDAO {
         return null;
     }
 
-    // ── RDV D'UN PATIENT ─────────────────────────────────────────────────────
-
     public List<Rdv> listerParPatient(String idpat) {
         List<Rdv> liste = new ArrayList<>();
         String sql = "SELECT r.idrdv, r.idmed, r.idpat, r.date_rdv, r.statut, " +
-                     "m.nommed, m.specialite, m.lieu, " +
-                     "p.nom_pat, p.email " +
-                     "FROM rdv r " +
-                     "JOIN medecin m ON r.idmed = m.idmed " +
-                     "JOIN patient p ON r.idpat = p.idpat " +
-                     "WHERE r.idpat = ? " +
-                     "ORDER BY r.date_rdv DESC";
+                "m.nommed, m.specialite, m.lieu, m.email as email_medecin, " +
+                "p.nom_pat, p.email as email_patient " +
+                "FROM rdv r " +
+                "JOIN medecin m ON r.idmed = m.idmed " +
+                "JOIN patient p ON r.idpat = p.idpat " +
+                "WHERE r.idpat = ? " +
+                "ORDER BY r.date_rdv DESC";
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -123,18 +112,16 @@ public class RdvDAO {
         return liste;
     }
 
-    // ── RDV D'UN MÉDECIN ─────────────────────────────────────────────────────
-
     public List<Rdv> listerParMedecin(String idmed) {
         List<Rdv> liste = new ArrayList<>();
         String sql = "SELECT r.idrdv, r.idmed, r.idpat, r.date_rdv, r.statut, " +
-                     "m.nommed, m.specialite, m.lieu, " +
-                     "p.nom_pat, p.email " +
-                     "FROM rdv r " +
-                     "JOIN medecin m ON r.idmed = m.idmed " +
-                     "JOIN patient p ON r.idpat = p.idpat " +
-                     "WHERE r.idmed = ? " +
-                     "ORDER BY r.date_rdv DESC";
+                "m.nommed, m.specialite, m.lieu, m.email as email_medecin, " +
+                "p.nom_pat, p.email as email_patient " +
+                "FROM rdv r " +
+                "JOIN medecin m ON r.idmed = m.idmed " +
+                "JOIN patient p ON r.idpat = p.idpat " +
+                "WHERE r.idmed = ? " +
+                "ORDER BY r.date_rdv DESC";
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -150,13 +137,11 @@ public class RdvDAO {
         return liste;
     }
 
-    // ── CRÉNEAUX DÉJÀ PRIS D'UN MÉDECIN ──────────────────────────────────────
-
     public List<LocalDateTime> listerCreneauxPris(String idmed) {
         List<LocalDateTime> creneaux = new ArrayList<>();
         String sql = "SELECT date_rdv FROM rdv " +
-                     "WHERE idmed = ? AND statut = 'CONFIRME' AND date_rdv >= NOW() " +
-                     "ORDER BY date_rdv";
+                "WHERE idmed = ? AND statut = 'CONFIRME' AND date_rdv >= NOW() " +
+                "ORDER BY date_rdv";
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -174,11 +159,9 @@ public class RdvDAO {
         return creneaux;
     }
 
-    // ── VÉRIFIER SI UN CRÉNEAU EST LIBRE ─────────────────────────────────────
-
     public boolean estCreneauLibre(String idmed, LocalDateTime dateRdv) {
         String sql = "SELECT COUNT(*) FROM rdv " +
-                     "WHERE idmed = ? AND date_rdv = ? AND statut = 'CONFIRME'";
+                "WHERE idmed = ? AND date_rdv = ? AND statut = 'CONFIRME'";
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -187,7 +170,7 @@ public class RdvDAO {
             ps.setTimestamp(2, Timestamp.valueOf(dateRdv));
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
-                    return rs.getInt(1) == 0; // 0 = libre, >0 = déjà pris
+                    return rs.getInt(1) == 0;
                 }
             }
 
@@ -196,8 +179,6 @@ public class RdvDAO {
         }
         return false;
     }
-
-    // ── ANNULER UN RDV ────────────────────────────────────────────────────────
 
     public boolean annuler(String idrdv) {
         String sql = "UPDATE rdv SET statut = 'ANNULE' WHERE idrdv = ?";
@@ -214,8 +195,6 @@ public class RdvDAO {
         }
     }
 
-    // ── DELETE ───────────────────────────────────────────────────────────────
-
     public boolean supprimer(String idrdv) {
         String sql = "DELETE FROM rdv WHERE idrdv = ?";
 
@@ -231,12 +210,6 @@ public class RdvDAO {
         }
     }
 
-    // ── MAPPER ───────────────────────────────────────────────────────────────
-
-    /**
-     * Convertit une ligne ResultSet en objet Rdv avec Medecin et Patient inclus.
-     * Utilisé quand on fait une jointure SQL (JOIN medecin JOIN patient).
-     */
     private Rdv mapperAvecJointure(ResultSet rs) throws SQLException {
         Rdv rdv = new Rdv();
         rdv.setIdrdv(rs.getString("idrdv"));
@@ -245,25 +218,23 @@ public class RdvDAO {
         rdv.setDateRdv(rs.getTimestamp("date_rdv").toLocalDateTime());
         rdv.setStatut(rs.getString("statut"));
 
-        // Médecin inclus dans la jointure
         Medecin m = new Medecin();
         m.setIdmed(rs.getString("idmed"));
         m.setNommed(rs.getString("nommed"));
         m.setSpecialite(rs.getString("specialite"));
         m.setLieu(rs.getString("lieu"));
+        m.setEmail(rs.getString("email_medecin"));
         rdv.setMedecin(m);
 
-        // Patient inclus dans la jointure
         Patient p = new Patient();
         p.setIdpat(rs.getString("idpat"));
         p.setNomPat(rs.getString("nom_pat"));
-        p.setEmail(rs.getString("email"));
+        p.setEmail(rs.getString("email_patient"));
         rdv.setPatient(p);
 
         return rdv;
     }
 
-    // ── MODIFIER date d'un RDV ────────────────────────────────────────────────
     public boolean modifier(String idrdv, LocalDateTime nouvelleDate) {
         String sql = "UPDATE rdv SET date_rdv = ?, statut = 'CONFIRME' WHERE idrdv = ?";
 
@@ -284,15 +255,14 @@ public class RdvDAO {
         }
     }
 
-    // ── HEURES PRISES PAR DATE (avec exclusion du RDV en cours de modif) ─────
     public List<String> listerHeuresPrisesParDate(String idmed, String date, String idRdvExclu) {
         List<String> heures = new ArrayList<>();
         String sql = "SELECT TO_CHAR(date_rdv, 'HH24:MI') as heure " +
-                     "FROM rdv " +
-                     "WHERE idmed = ? " +
-                     "AND DATE(date_rdv) = ? " +
-                     "AND statut = 'CONFIRME' " +
-                     (idRdvExclu != null ? "AND idrdv != ?" : "");
+                "FROM rdv " +
+                "WHERE idmed = ? " +
+                "AND DATE(date_rdv) = ? " +
+                "AND statut = 'CONFIRME' " +
+                (idRdvExclu != null ? "AND idrdv != ?" : "");
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -312,7 +282,4 @@ public class RdvDAO {
         }
         return heures;
     }
-
 }
-
-    
