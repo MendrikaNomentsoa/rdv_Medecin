@@ -55,12 +55,14 @@ public class RdvService {
         // Récupérer le RDV complet avec médecin et patient pour le mail
         List<Rdv> rdvPatient = rdvDAO.listerParPatient(idpat);
         if (!rdvPatient.isEmpty()) {
-            // Envoyer mail de confirmation (au patient et au médecin)
-            try {
-                mailService.envoyerConfirmation(rdvPatient.get(0));
-            } catch (Exception e) {
-                // Le RDV est créé même si le mail échoue
-                System.err.println("[RdvService] Mail non envoyé : " + e.getMessage());
+            Rdv nouveauRdv = rdvPatient.get(0);
+            // Vérifier que le RDV correspond bien au médecin choisi
+            if (nouveauRdv.getIdmed().equals(idmed)) {
+                try {
+                    mailService.envoyerConfirmation(nouveauRdv);
+                } catch (Exception e) {
+                    System.err.println("[RdvService] Mail non envoyé : " + e.getMessage());
+                }
             }
         }
 
