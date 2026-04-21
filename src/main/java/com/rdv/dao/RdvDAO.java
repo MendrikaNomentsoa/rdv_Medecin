@@ -115,7 +115,7 @@ public class RdvDAO {
     public List<Rdv> listerParMedecin(String idmed) {
         List<Rdv> liste = new ArrayList<>();
         String sql = "SELECT r.idrdv, r.idmed, r.idpat, r.date_rdv, r.statut, " +
-                "m.nommed, m.specialite, m.lieu, m.email as email_medecin, " +
+                "m.nommed, m.specialite, m.lieu, m.taux_horaire, m.email as email_medecin, " +
                 "p.nom_pat, p.email as email_patient " +
                 "FROM rdv r " +
                 "JOIN medecin m ON r.idmed = m.idmed " +
@@ -128,15 +128,17 @@ public class RdvDAO {
 
             ps.setString(1, idmed);
             try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) liste.add(mapperAvecJointure(rs));
+                while (rs.next()) {
+                    liste.add(mapperAvecJointure(rs));
+                }
             }
 
         } catch (SQLException e) {
             System.err.println("[RdvDAO] Erreur listerParMedecin : " + e.getMessage());
+            e.printStackTrace();
         }
         return liste;
     }
-
     public List<LocalDateTime> listerCreneauxPris(String idmed) {
         List<LocalDateTime> creneaux = new ArrayList<>();
         String sql = "SELECT date_rdv FROM rdv " +
