@@ -39,13 +39,12 @@ public class AuthFilter implements Filter {
     public void doFilter(ServletRequest request, ServletResponse response,
                          FilterChain chain) throws IOException, ServletException {
 
-        HttpServletRequest  req  = (HttpServletRequest)  request;
+        HttpServletRequest req = (HttpServletRequest) request;
         HttpServletResponse resp = (HttpServletResponse) response;
 
-        String chemin = req.getRequestURI()
-                .substring(req.getContextPath().length());
+        String chemin = req.getRequestURI().substring(req.getContextPath().length());
+        String method = req.getMethod();
 
-        // 1. Pages publiques → laisser passer
         for (String page : PAGES_PUBLIQUES) {
             if (chemin.startsWith(page)) {
                 chain.doFilter(request, response);
@@ -53,18 +52,14 @@ public class AuthFilter implements Filter {
             }
         }
 
-        // 2. Non connecté → login
         HttpSession session = req.getSession(false);
-        boolean connecte = (session != null
-                && session.getAttribute("utilisateur") != null);
+        boolean connecte = (session != null && session.getAttribute("utilisateur") != null);
 
         if (!connecte) {
-            resp.sendRedirect(req.getContextPath()
-                    + "/views/shared/login.jsp");
+            resp.sendRedirect(req.getContextPath() + "/views/shared/login.jsp");
             return;
         }
 
-        // 3. Page médecin → vérifier le rôle
         String role = (String) session.getAttribute("role");
         String idUtilisateur = (String) session.getAttribute("idUtilisateur");
 
@@ -72,23 +67,26 @@ public class AuthFilter implements Filter {
             if (chemin.startsWith(page)) {
                 if (!"medecin".equals(role)) {
 
-                    // Exception : un patient peut modifier SON propre profil
-                    if (chemin.startsWith("/patient")
-                            && "edit".equals(req.getParameter("action"))
+                    // Exception : patient modifie son propre profil
+                    if (chemin.startsWith("/patient") && "edit".equals(req.getParameter("action"))
                             && idUtilisateur != null && idUtilisateur.equals(req.getParameter("id"))) {
                         chain.doFilter(request, response);
                         return;
                     }
 
-                    // Sinon refusé
-                    resp.sendRedirect(req.getContextPath()
-                            + "/views/patient/dashboard.jsp");
+                    // Exception : POST pour enregistrer les modifications
+                    if (chemin.startsWith("/patient") && "POST".equalsIgnoreCase(method)
+                            && "enregistrer".equals(req.getParameter("action"))) {
+                        chain.doFilter(request, response);
+                        return;
+                    }
+
+                    resp.sendRedirect(req.getContextPath() + "/views/patient/dashboard.jsp");
                     return;
                 }
             }
         }
 
-        // 4. Ok → laisser passer
         chain.doFilter(request, response);
     }
 }

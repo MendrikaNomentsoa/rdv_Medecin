@@ -8,6 +8,7 @@ import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 import com.rdv.model.Medecin;
 import com.rdv.model.Patient;
@@ -17,8 +18,7 @@ import com.rdv.util.DBConnection;
 public class RdvDAO {
 
     public boolean inserer(Rdv rdv) {
-        String sql = "INSERT INTO rdv (idmed, idpat, date_rdv, statut) " +
-                "VALUES (?, ?, ?, ?)";
+        String sql = "INSERT INTO rdv (idmed, idpat, date_rdv, statut) VALUES (?::uuid, ?::uuid, ?, ?)";
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -42,7 +42,7 @@ public class RdvDAO {
 
     public List<Rdv> listerTous() {
         List<Rdv> liste = new ArrayList<>();
-        String sql = "SELECT r.idrdv, r.idmed, r.idpat, r.date_rdv, r.statut, " +
+        String sql = "SELECT r.idrdv::text, r.idmed::text, r.idpat::text, r.date_rdv, r.statut, " +
                 "m.nommed, m.specialite, m.lieu, m.email as email_medecin, " +
                 "p.nom_pat, p.email as email_patient " +
                 "FROM rdv r " +
@@ -60,18 +60,19 @@ public class RdvDAO {
 
         } catch (SQLException e) {
             System.err.println("[RdvDAO] Erreur listerTous : " + e.getMessage());
+            e.printStackTrace();
         }
         return liste;
     }
 
     public Rdv trouverParId(String idrdv) {
-        String sql = "SELECT r.idrdv, r.idmed, r.idpat, r.date_rdv, r.statut, " +
+        String sql = "SELECT r.idrdv::text, r.idmed::text, r.idpat::text, r.date_rdv, r.statut, " +
                 "m.nommed, m.specialite, m.lieu, m.email as email_medecin, " +
                 "p.nom_pat, p.email as email_patient " +
                 "FROM rdv r " +
                 "JOIN medecin m ON r.idmed = m.idmed " +
                 "JOIN patient p ON r.idpat = p.idpat " +
-                "WHERE r.idrdv = ?";
+                "WHERE r.idrdv::text = ?";
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -83,19 +84,20 @@ public class RdvDAO {
 
         } catch (SQLException e) {
             System.err.println("[RdvDAO] Erreur trouverParId : " + e.getMessage());
+            e.printStackTrace();
         }
         return null;
     }
 
     public List<Rdv> listerParPatient(String idpat) {
         List<Rdv> liste = new ArrayList<>();
-        String sql = "SELECT r.idrdv, r.idmed, r.idpat, r.date_rdv, r.statut, " +
+        String sql = "SELECT r.idrdv::text, r.idmed::text, r.idpat::text, r.date_rdv, r.statut, " +
                 "m.nommed, m.specialite, m.lieu, m.email as email_medecin, " +
                 "p.nom_pat, p.email as email_patient " +
                 "FROM rdv r " +
                 "JOIN medecin m ON r.idmed = m.idmed " +
                 "JOIN patient p ON r.idpat = p.idpat " +
-                "WHERE r.idpat = ? " +
+                "WHERE r.idpat::text = ? " +
                 "ORDER BY r.date_rdv DESC";
 
         try (Connection conn = DBConnection.getConnection();
@@ -108,20 +110,23 @@ public class RdvDAO {
 
         } catch (SQLException e) {
             System.err.println("[RdvDAO] Erreur listerParPatient : " + e.getMessage());
+            e.printStackTrace();
         }
         return liste;
     }
 
     public List<Rdv> listerParMedecin(String idmed) {
         List<Rdv> liste = new ArrayList<>();
-        String sql = "SELECT r.idrdv, r.idmed, r.idpat, r.date_rdv, r.statut, " +
+        String sql = "SELECT r.idrdv::text, r.idmed::text, r.idpat::text, r.date_rdv, r.statut, " +
                 "m.nommed, m.specialite, m.lieu, m.taux_horaire, m.email as email_medecin, " +
                 "p.nom_pat, p.email as email_patient " +
                 "FROM rdv r " +
                 "JOIN medecin m ON r.idmed = m.idmed " +
                 "JOIN patient p ON r.idpat = p.idpat " +
-                "WHERE r.idmed = ? " +
+                "WHERE r.idmed::text = ? " +
                 "ORDER BY r.date_rdv DESC";
+
+        System.out.println("[RdvDAO] listerParMedecin - ID: " + idmed);
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -129,7 +134,10 @@ public class RdvDAO {
             ps.setString(1, idmed);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
-                    liste.add(mapperAvecJointure(rs));
+                    Rdv rdv = mapperAvecJointure(rs);
+                    liste.add(rdv);
+                    System.out.println("[RdvDAO] RDV trouvé: " + rdv.getDateRdv() + " - Patient: " +
+                            (rdv.getPatient() != null ? rdv.getPatient().getNomPat() : "NULL"));
                 }
             }
 
@@ -137,12 +145,14 @@ public class RdvDAO {
             System.err.println("[RdvDAO] Erreur listerParMedecin : " + e.getMessage());
             e.printStackTrace();
         }
+        System.out.println("[RdvDAO] Total RDV trouvés: " + liste.size());
         return liste;
     }
+
     public List<LocalDateTime> listerCreneauxPris(String idmed) {
         List<LocalDateTime> creneaux = new ArrayList<>();
         String sql = "SELECT date_rdv FROM rdv " +
-                "WHERE idmed = ? AND statut = 'CONFIRME' AND date_rdv >= NOW() " +
+                "WHERE idmed::text = ? AND statut = 'CONFIRME' AND date_rdv >= NOW() " +
                 "ORDER BY date_rdv";
 
         try (Connection conn = DBConnection.getConnection();
@@ -163,7 +173,7 @@ public class RdvDAO {
 
     public boolean estCreneauLibre(String idmed, LocalDateTime dateRdv) {
         String sql = "SELECT COUNT(*) FROM rdv " +
-                "WHERE idmed = ? AND date_rdv = ? AND statut = 'CONFIRME'";
+                "WHERE idmed::text = ? AND date_rdv = ? AND statut = 'CONFIRME'";
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -183,7 +193,7 @@ public class RdvDAO {
     }
 
     public boolean annuler(String idrdv) {
-        String sql = "UPDATE rdv SET statut = 'ANNULE' WHERE idrdv = ?";
+        String sql = "UPDATE rdv SET statut = 'ANNULE' WHERE idrdv::text = ?";
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -198,7 +208,7 @@ public class RdvDAO {
     }
 
     public boolean supprimer(String idrdv) {
-        String sql = "DELETE FROM rdv WHERE idrdv = ?";
+        String sql = "DELETE FROM rdv WHERE idrdv::text = ?";
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -217,7 +227,11 @@ public class RdvDAO {
         rdv.setIdrdv(rs.getString("idrdv"));
         rdv.setIdmed(rs.getString("idmed"));
         rdv.setIdpat(rs.getString("idpat"));
-        rdv.setDateRdv(rs.getTimestamp("date_rdv").toLocalDateTime());
+
+        Timestamp ts = rs.getTimestamp("date_rdv");
+        if (ts != null) {
+            rdv.setDateRdv(ts.toLocalDateTime());
+        }
         rdv.setStatut(rs.getString("statut"));
 
         Medecin m = new Medecin();
@@ -238,7 +252,7 @@ public class RdvDAO {
     }
 
     public boolean modifier(String idrdv, LocalDateTime nouvelleDate) {
-        String sql = "UPDATE rdv SET date_rdv = ?, statut = 'CONFIRME' WHERE idrdv = ?";
+        String sql = "UPDATE rdv SET date_rdv = ?, statut = 'CONFIRME' WHERE idrdv::text = ?";
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -261,10 +275,10 @@ public class RdvDAO {
         List<String> heures = new ArrayList<>();
         String sql = "SELECT TO_CHAR(date_rdv, 'HH24:MI') as heure " +
                 "FROM rdv " +
-                "WHERE idmed = ? " +
+                "WHERE idmed::text = ? " +
                 "AND DATE(date_rdv) = ? " +
                 "AND statut = 'CONFIRME' " +
-                (idRdvExclu != null ? "AND idrdv != ?" : "");
+                (idRdvExclu != null ? "AND idrdv::text != ?" : "");
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {

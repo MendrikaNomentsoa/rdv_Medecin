@@ -16,6 +16,7 @@ import com.zaxxer.hikari.HikariDataSource;
 public class DBConnection {
 
     private static HikariDataSource dataSource;
+    private static boolean initialized = false;
 
     // Constructeur privé : on ne peut pas instancier cette classe
     private DBConnection() {}
@@ -25,6 +26,11 @@ public class DBConnection {
      * Lit la configuration depuis db.properties.
      */
     public static void init() {
+        if (initialized) {
+            System.out.println("[DBConnection] Pool déjà initialisé.");
+            return;
+        }
+
         try {
             // Charger le fichier db.properties depuis le classpath
             Properties props = new Properties();
@@ -45,15 +51,15 @@ public class DBConnection {
 
             // Paramètres du pool
             config.setMaximumPoolSize(
-                Integer.parseInt(props.getProperty("db.pool.maximumPoolSize", "10")));
+                    Integer.parseInt(props.getProperty("db.pool.maximumPoolSize", "10")));
             config.setMinimumIdle(
-                Integer.parseInt(props.getProperty("db.pool.minimumIdle", "2")));
+                    Integer.parseInt(props.getProperty("db.pool.minimumIdle", "2")));
             config.setConnectionTimeout(
-                Long.parseLong(props.getProperty("db.pool.connectionTimeout", "30000")));
+                    Long.parseLong(props.getProperty("db.pool.connectionTimeout", "30000")));
             config.setIdleTimeout(
-                Long.parseLong(props.getProperty("db.pool.idleTimeout", "600000")));
+                    Long.parseLong(props.getProperty("db.pool.idleTimeout", "600000")));
             config.setMaxLifetime(
-                Long.parseLong(props.getProperty("db.pool.maxLifetime", "1800000")));
+                    Long.parseLong(props.getProperty("db.pool.maxLifetime", "1800000")));
 
             // Nom du pool (utile pour les logs)
             config.setPoolName("RdvMedicalPool");
@@ -61,8 +67,15 @@ public class DBConnection {
             // Driver PostgreSQL
             config.setDriverClassName("org.postgresql.Driver");
 
+            // Paramètres supplémentaires pour PostgreSQL
+            config.addDataSourceProperty("prepareThreshold", "0");
+            config.addDataSourceProperty("preparedStatementCacheQueries", "0");
+            config.addDataSourceProperty("preparedStatementCacheSizeMiB", "0");
+
             dataSource = new HikariDataSource(config);
-            System.out.println("[DBConnection] Pool initialisé avec succès.");
+            initialized = true;
+            System.out.println("[DBConnection] Pool PostgreSQL initialisé avec succès.");
+            System.out.println("[DBConnection] URL: " + props.getProperty("db.url"));
 
         } catch (IOException e) {
             throw new RuntimeException("Erreur lecture db.properties : " + e.getMessage(), e);
@@ -72,17 +85,25 @@ public class DBConnection {
     /**
      * Retourne une connexion depuis le pool.
      * À utiliser dans un try-with-resources pour la refermer automatiquement.
-     *
-     * Exemple d'utilisation :
-     *   try (Connection conn = DBConnection.getConnection()) {
-     *       // utiliser conn
-     *   }
      */
     public static Connection getConnection() throws SQLException {
-        if (dataSource == null) {
-            throw new SQLException("Le pool de connexions n'est pas initialisé. Appelez DBConnection.init() d'abord.");
+        if (dataSource == null || !initialized) {
+            System.err.println("[DBConnection] Pool non initialisé, tentative d'initialisation...");
+            init();
         }
-        return dataSource.getConnection();
+
+        if (dataSource == null) {
+            throw new SQLException("Le pool de connexions n'a pas pu être initialisé.");
+        }
+
+        try {
+            Connection conn = dataSource.getConnection();
+            System.out.println("[DBConnection] Connexion PostgreSQL obtenue avec succès.");
+            return conn;
+        } catch (SQLException e) {
+            System.err.println("[DBConnection] Erreur lors de l'obtention de la connexion : " + e.getMessage());
+            throw e;
+        }
     }
 
     /**
@@ -91,7 +112,20 @@ public class DBConnection {
     public static void close() {
         if (dataSource != null && !dataSource.isClosed()) {
             dataSource.close();
-            System.out.println("[DBConnection] Pool fermé.");
+            initialized = false;
+            System.out.println("[DBConnection] Pool PostgreSQL fermé.");
+        }
+    }
+
+    /**
+     * Vérifie si le pool est initialisé et fonctionnel
+     */
+    public static boolean testConnection() {
+        try (Connection conn = getConnection()) {
+            return conn != null && !conn.isClosed();
+        } catch (SQLException e) {
+            System.err.println("[DBConnection] Test de connexion échoué : " + e.getMessage());
+            return false;
         }
     }
 }

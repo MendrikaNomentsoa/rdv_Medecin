@@ -4,24 +4,20 @@
 
 <div class="container">
 
-    <%-- Message de bienvenue --%>
+    <c:if test="${not empty messageSucces}">
+        <div class="alert alert-success" style="background:#d4edda; color:#155724; padding:12px; border-radius:8px; margin-bottom:20px; border:1px solid #c3e6cb;">
+            ✓ ${messageSucces}
+        </div>
+    </c:if>
+
     <div class="card" style="background:linear-gradient(135deg,#1a73e8,#0d47a1); color:white; padding:30px;">
         <h2 style="font-size:22px; margin-bottom:8px;">
-            Bonjour,
-                <c:choose>
-                    <c:when test="${sessionScope.role == 'patient'}">
-                        ${sessionScope.utilisateur.nomPat}
-                    </c:when>
-                    <c:otherwise>
-                        Dr. ${sessionScope.utilisateur.nommed}
-                    </c:otherwise>
-                </c:choose>
-                !
+            Bonjour, ${sessionScope.utilisateur.nomPat} ! 👋
         </h2>
         <p style="opacity:0.85; font-size:14px;">Bienvenue sur votre espace patient.</p>
+        <p style="opacity:0.7; font-size:12px; margin-top:8px;">📧 ${sessionScope.utilisateur.email}</p>
     </div>
 
-    <%-- Actions rapides --%>
     <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px,1fr)); gap:16px; margin-bottom:20px;">
 
         <a href="${pageContext.request.contextPath}/search" style="text-decoration:none;">

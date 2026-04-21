@@ -2,6 +2,27 @@
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <%@ include file="/views/shared/header.jsp" %>
 
+<%-- Logs JSP pour débogage --%>
+<%
+    System.out.println("\n=== DASHBOARD JSP MÉDECIN ===");
+    System.out.println("nbRdvPasses: " + request.getAttribute("nbRdvPasses"));
+    System.out.println("nbRdvAVenir: " + request.getAttribute("nbRdvAVenir"));
+    System.out.println("totalPatients: " + request.getAttribute("totalPatients"));
+    System.out.println("rdvAujourdhui: " + request.getAttribute("rdvAujourdhui"));
+    System.out.println("rdvCetteSemaine: " + request.getAttribute("rdvCetteSemaine"));
+    System.out.println("revenusMois: " + request.getAttribute("revenusMois"));
+    System.out.println("prochainRdv: " + (request.getAttribute("prochainRdv") != null ? "présent" : "null"));
+
+    java.util.List derniersPatients = (java.util.List) request.getAttribute("derniersPatients");
+    System.out.println("derniersPatients (JSP): " + (derniersPatients != null ? derniersPatients.size() : "null"));
+    if (derniersPatients != null) {
+        for (Object obj : derniersPatients) {
+            System.out.println("  - " + obj);
+        }
+    }
+    System.out.println("===============================\n");
+%>
+
 <div class="container">
 
     <!-- Bienvenue -->
