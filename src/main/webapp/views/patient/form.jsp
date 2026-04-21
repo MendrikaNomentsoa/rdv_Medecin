@@ -18,7 +18,7 @@
 
         <form action="${pageContext.request.contextPath}/patient" method="post">
             <input type="hidden" name="action" value="enregistrer">
-            <input type="hidden" name="idpat"  value="${patient.idpat}">
+            <input type="hidden" name="idpat" value="${patient.idpat}">
 
             <div class="form-group">
                 <label>Nom complet</label>
@@ -40,7 +40,6 @@
                        placeholder="votre@email.com" required>
             </div>
 
-            <%-- Mot de passe uniquement à la création --%>
             <c:if test="${empty patient}">
                 <div class="form-group">
                     <label>Mot de passe</label>
@@ -56,10 +55,21 @@
                         <c:otherwise>Créer le patient</c:otherwise>
                     </c:choose>
                 </button>
-                <a href="${pageContext.request.contextPath}/patient?action=liste"
-                   class="btn btn-secondary" style="flex:1; text-align:center;">
-                    Annuler
-                </a>
+
+                <c:choose>
+                    <c:when test="${sessionScope.role == 'patient' and not empty patient}">
+                        <a href="${pageContext.request.contextPath}/patient?action=dashboard"
+                           class="btn btn-secondary" style="flex:1; text-align:center;">
+                            Annuler
+                        </a>
+                    </c:when>
+                    <c:otherwise>
+                        <a href="${pageContext.request.contextPath}/patient?action=liste"
+                           class="btn btn-secondary" style="flex:1; text-align:center;">
+                            Annuler
+                        </a>
+                    </c:otherwise>
+                </c:choose>
             </div>
         </form>
 

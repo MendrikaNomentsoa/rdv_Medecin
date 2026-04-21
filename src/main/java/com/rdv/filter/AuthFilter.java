@@ -16,34 +16,35 @@ import jakarta.servlet.http.HttpSession;
 public class AuthFilter implements Filter {
 
     private static final String[] PAGES_PUBLIQUES = {
-        "/views/shared/login.jsp",
-        "/views/shared/register.jsp",
-        "/auth",
-        "/index.jsp",
-        "/css/",
-        "/js/"
+            "/views/shared/login.jsp",
+            "/views/shared/register.jsp",
+            "/views/shared/forgot-password.jsp",
+            "/views/shared/reset-password.jsp",
+            "/auth",
+            "/index.jsp",
+            "/css/",
+            "/js/"
     };
 
     private static final String[] PAGES_MEDECIN = {
-        "/patient",
-        "/medecin",
-        "/views/patient/list.jsp",
-        "/views/medecin/list.jsp",
-        "/views/medecin/form.jsp",
-        "/views/medecin/top5.jsp"
+            "/patient",
+            "/medecin",
+            "/views/patient/list.jsp",
+            "/views/medecin/list.jsp",
+            "/views/medecin/form.jsp",
+            "/views/medecin/top5.jsp"
     };
 
     @Override
     public void doFilter(ServletRequest request, ServletResponse response,
                          FilterChain chain) throws IOException, ServletException {
 
-        HttpServletRequest  req  = (HttpServletRequest)  request;
+        HttpServletRequest req = (HttpServletRequest) request;
         HttpServletResponse resp = (HttpServletResponse) response;
 
-        String chemin = req.getRequestURI()
-                           .substring(req.getContextPath().length());
+        String chemin = req.getRequestURI().substring(req.getContextPath().length());
+        String method = req.getMethod();
 
-        // 1. Pages publiques → laisser passer
         for (String page : PAGES_PUBLIQUES) {
             if (chemin.startsWith(page)) {
                 chain.doFilter(request, response);
@@ -51,43 +52,41 @@ public class AuthFilter implements Filter {
             }
         }
 
-        // 2. Non connecté → login
         HttpSession session = req.getSession(false);
-        boolean connecte = (session != null
-                         && session.getAttribute("utilisateur") != null);
+        boolean connecte = (session != null && session.getAttribute("utilisateur") != null);
 
         if (!connecte) {
-            resp.sendRedirect(req.getContextPath()
-                            + "/views/shared/login.jsp");
+            resp.sendRedirect(req.getContextPath() + "/views/shared/login.jsp");
             return;
         }
 
-        // 3. Page médecin → vérifier le rôle
-String role = (String) session.getAttribute("role");
-String idUtilisateur = (String) session.getAttribute("idUtilisateur");
+        String role = (String) session.getAttribute("role");
+        String idUtilisateur = (String) session.getAttribute("idUtilisateur");
 
-for (String page : PAGES_MEDECIN) {
-    if (chemin.startsWith(page)) {
-        if (!"medecin".equals(role)) {
+        for (String page : PAGES_MEDECIN) {
+            if (chemin.startsWith(page)) {
+                if (!"medecin".equals(role)) {
 
-            // Exception : un patient peut modifier SON propre profil
-            if (chemin.startsWith("/patient") 
-                && "edit".equals(req.getParameter("action"))
-                && idUtilisateur.equals(req.getParameter("id"))) {
-                chain.doFilter(request, response);
-                return;
+                    // Exception : patient modifie son propre profil
+                    if (chemin.startsWith("/patient") && "edit".equals(req.getParameter("action"))
+                            && idUtilisateur != null && idUtilisateur.equals(req.getParameter("id"))) {
+                        chain.doFilter(request, response);
+                        return;
+                    }
+
+                    // Exception : POST pour enregistrer les modifications
+                    if (chemin.startsWith("/patient") && "POST".equalsIgnoreCase(method)
+                            && "enregistrer".equals(req.getParameter("action"))) {
+                        chain.doFilter(request, response);
+                        return;
+                    }
+
+                    resp.sendRedirect(req.getContextPath() + "/views/patient/dashboard.jsp");
+                    return;
+                }
             }
-
-            // Sinon refusé
-            resp.sendRedirect(req.getContextPath()
-                            + "/views/patient/dashboard.jsp");
-            return;
-        }
-    }
-
         }
 
-        // 4. Ok → laisser passer
         chain.doFilter(request, response);
     }
 }

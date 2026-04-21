@@ -1,10 +1,14 @@
 package com.rdv.service;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.List;
 
 import com.rdv.dao.PatientDAO;
 import com.rdv.model.Patient;
+import com.rdv.util.DBConnection;
 import com.rdv.util.PasswordUtil;
 
 /**
@@ -76,15 +80,24 @@ public class PatientService {
     }
 
     public Patient trouverParId(String idpat) {
+        if (idpat == null || idpat.isEmpty()) return null;
         return patientDAO.trouverParId(idpat);
     }
 
-    public String modifier(String idpat, String nom,
-                           String dateNaisStr, String email) {
-        if (nom == null || nom.trim().isEmpty())
-            return "Le nom est obligatoire.";
-        if (email == null || !email.contains("@"))
-            return "Email invalide.";
+    /**
+     * Trouve un patient par son email
+     */
+    public Patient trouverParEmail(String email) {
+        if (email == null || email.isEmpty()) return null;
+        return patientDAO.trouverParEmail(email.trim().toLowerCase());
+    }
+
+    /**
+     * Modifie un patient et retourne le patient mis à jour
+     */
+    public Patient modifierEtRetourner(String idpat, String nom, String dateNaisStr, String email) {
+        if (nom == null || nom.trim().isEmpty()) return null;
+        if (email == null || !email.contains("@")) return null;
 
         Patient patient = new Patient();
         patient.setIdpat(idpat);
@@ -93,10 +106,87 @@ public class PatientService {
         patient.setEmail(email.trim().toLowerCase());
 
         boolean ok = patientDAO.modifier(patient);
-        return ok ? null : "Erreur lors de la modification.";
+        if (!ok) return null;
+
+        // Retourner le patient mis à jour depuis la base
+        return patientDAO.trouverParId(idpat);
+    }
+
+    /**
+     * Modifie un patient et retourne null si succès, un message d'erreur sinon
+     */
+    public String modifier(String idpat, String nom, String dateNaisStr, String email) {
+        // Validation
+        if (idpat == null || idpat.trim().isEmpty()) {
+            return "ID patient manquant.";
+        }
+        if (nom == null || nom.trim().isEmpty()) {
+            return "Le nom est obligatoire.";
+        }
+        if (email == null || !email.contains("@")) {
+            return "Email invalide.";
+        }
+
+        // Vérifier que la date est valide
+        try {
+            LocalDate.parse(dateNaisStr);
+        } catch (Exception e) {
+            return "Date de naissance invalide.";
+        }
+
+        // Vérifier si le patient existe
+        Patient patientExistant = patientDAO.trouverParId(idpat);
+        if (patientExistant == null) {
+            return "Patient non trouvé.";
+        }
+
+        // Vérifier si l'email est déjà utilisé par un autre patient
+        Patient patientMemeEmail = patientDAO.trouverParEmail(email.trim().toLowerCase());
+        if (patientMemeEmail != null && !patientMemeEmail.getIdpat().equals(idpat)) {
+            return "Cet email est déjà utilisé par un autre patient.";
+        }
+
+        // Créer l'objet patient avec les nouvelles données
+        Patient patient = new Patient();
+        patient.setIdpat(idpat);
+        patient.setNomPat(nom.trim());
+        patient.setDatenais(LocalDate.parse(dateNaisStr));
+        patient.setEmail(email.trim().toLowerCase());
+
+        System.out.println("[PatientService] Modification patient - ID: " + idpat +
+                ", Nom: " + nom + ", Email: " + email);
+
+        boolean ok = patientDAO.modifier(patient);
+
+        if (!ok) {
+            System.err.println("[PatientService] Échec de la modification en base de données");
+            return "Erreur lors de la modification en base de données.";
+        }
+
+        System.out.println("[PatientService] Modification réussie");
+        return null; // Succès
     }
 
     public boolean supprimer(String idpat) {
+        if (idpat == null || idpat.isEmpty()) return false;
         return patientDAO.supprimer(idpat);
+    }
+
+    /**
+     * Modifie le mot de passe d'un patient
+     */
+    public boolean modifierMotDePasse(Patient patient) {
+        if (patient == null || patient.getIdpat() == null) return false;
+
+        String sql = "UPDATE patient SET mot_de_passe = ? WHERE idpat = ?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, patient.getMotDePasse());
+            ps.setString(2, patient.getIdpat());
+            return ps.executeUpdate() == 1;
+        } catch (SQLException e) {
+            System.err.println("[PatientService] Erreur modifierMotDePasse : " + e.getMessage());
+            return false;
+        }
     }
 }

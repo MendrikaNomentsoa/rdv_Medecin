@@ -1,9 +1,13 @@
 package com.rdv.service;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.util.List;
 
 import com.rdv.dao.MedecinDAO;
 import com.rdv.model.Medecin;
+import com.rdv.util.DBConnection;
 import com.rdv.util.PasswordUtil;
 
 /**
@@ -79,6 +83,14 @@ public class MedecinService {
         return medecinDAO.trouverParId(idmed);
     }
 
+    /**
+     * Trouve un médecin par son email
+     */
+    public Medecin trouverParEmail(String email) {
+        if (email == null || email.isEmpty()) return null;
+        return medecinDAO.trouverParEmail(email.trim().toLowerCase());
+    }
+
     public List<Medecin> rechercherParNom(String motCle) {
         if (motCle == null || motCle.trim().isEmpty())
             return medecinDAO.listerTous();
@@ -125,5 +137,23 @@ public class MedecinService {
 
     public boolean supprimer(String idmed) {
         return medecinDAO.supprimer(idmed);
+    }
+
+    /**
+     * Modifie le mot de passe d'un médecin
+     */
+    public boolean modifierMotDePasse(Medecin medecin) {
+        if (medecin == null || medecin.getIdmed() == null) return false;
+
+        String sql = "UPDATE medecin SET mot_de_passe = ? WHERE idmed = ?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, medecin.getMotDePasse());
+            ps.setString(2, medecin.getIdmed());
+            return ps.executeUpdate() == 1;
+        } catch (SQLException e) {
+            System.err.println("[MedecinService] Erreur modifierMotDePasse : " + e.getMessage());
+            return false;
+        }
     }
 }
