@@ -1,5 +1,6 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
+<%@ taglib prefix="fn" uri="jakarta.tags.functions" %>
 <%@ include file="/views/shared/header.jsp" %>
 
 <div class="container">
@@ -42,7 +43,7 @@
                         </thead>
                         <tbody>
                             <c:forEach var="p" items="${patients}">
-                                <tr class="patient-row" data-name="${p.nomPat.toLowerCase()}">
+                                <tr class="patient-row" data-name="${fn:toLowerCase(p.nomPat)}">
                                     <td>
                                         <div style="display:flex; align-items:center; gap:10px;">
                                             <div class="patient-avatar" style="width:35px; height:35px; background:linear-gradient(135deg, #1a73e8, #0d47a1); border-radius:50%; display:flex; align-items:center; justify-content:center; color:white; font-weight:bold;">
@@ -57,7 +58,9 @@
                                     </td>
                                     <td style="text-align:center;">
                                         <span class="age-badge" style="background:var(--hover-bg); padding:4px 8px; border-radius:20px; font-size:12px;">
-                                            ${Math.floor((new Date().getTime() - new Date(p.datenais).getTime()) / (1000 * 60 * 60 * 24 * 365.25))} ans
+                                            <c:set var="birthYear" value="${fn:substring(p.datenais, 0, 4)}" />
+                                            <c:set var="currentYear" value="<%= java.time.Year.now().getValue() %>" />
+                                            ${currentYear - birthYear} ans
                                         </span>
                                     </td>
                                     <td style="text-align:center;">
@@ -137,7 +140,7 @@
             const rows = document.querySelectorAll('.patient-row');
             rows.forEach(row => {
                 const name = row.getAttribute('data-name');
-                if (name.includes(searchTerm)) {
+                if (name && name.includes(searchTerm)) {
                     row.style.display = '';
                     row.style.animation = 'fadeInUp 0.3s ease';
                 } else {
