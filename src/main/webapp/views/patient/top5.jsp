@@ -5,19 +5,9 @@
 <div class="container">
     <div class="card">
         <h2 class="card-title">🏆 Top 5 — Médecins les plus consultés</h2>
-
-        <c:choose>
-            <c:when test="${sessionScope.role == 'medecin'}">
-                <p style="color:#666; font-size:13px; margin-bottom:20px;">
-                    Classement des médecins les plus sollicités par les patients
-                </p>
-            </c:when>
-            <c:otherwise>
-                <p style="color:#666; font-size:13px; margin-bottom:20px;">
-                    Découvrez les médecins les plus sollicités par les patients
-                </p>
-            </c:otherwise>
-        </c:choose>
+        <p style="color:#666; font-size:13px; margin-bottom:20px;">
+            Découvrez les médecins les plus sollicités par les patients
+        </p>
 
         <c:choose>
             <c:when test="${empty top5}">
@@ -58,34 +48,22 @@
                             </div>
                         </div>
 
-                        <%-- Bouton - différent selon le rôle --%>
-                        <c:choose>
-                            <c:when test="${sessionScope.role == 'patient'}">
-                                <a href="${pageContext.request.contextPath}/rdv?action=form&idmed=${m.idmed}"
-                                   class="btn btn-primary" style="font-size:14px; white-space:nowrap; padding:10px 20px;">
-                                    📅 Prendre RDV
-                                </a>
-                            </c:when>
-                            <c:otherwise>
-                                <%-- Pour le médecin, pas de bouton Prendre RDV --%>
-                                <div style="font-size:13px; color:#34a853; background:#e6f4ea; padding:8px 16px; border-radius:20px;">
-                                    ⭐ Consulté ${m.nbConsultations != null ? m.nbConsultations : 'plusieurs'} fois
-                                </div>
-                            </c:otherwise>
-                        </c:choose>
+                        <%-- Bouton prendre RDV --%>
+                        <a href="${pageContext.request.contextPath}/rdv?action=form&idmed=${m.idmed}"
+                           class="btn btn-primary" style="font-size:14px; white-space:nowrap; padding:10px 20px;">
+                            📅 Prendre RDV
+                        </a>
                     </div>
                 </c:forEach>
             </c:otherwise>
         </c:choose>
 
-        <!-- Lien pour voir tous les médecins (seulement pour les patients) -->
-        <c:if test="${sessionScope.role == 'patient'}">
-            <div style="margin-top:25px; text-align:center;">
-                <a href="${pageContext.request.contextPath}/search" class="btn btn-secondary">
-                    🔍 Voir tous les médecins
-                </a>
-            </div>
-        </c:if>
+        <!-- Lien pour voir tous les médecins -->
+        <div style="margin-top:25px; text-align:center;">
+            <a href="${pageContext.request.contextPath}/search" class="btn btn-secondary">
+                🔍 Voir tous les médecins
+            </a>
+        </div>
     </div>
 </div>
 </body>

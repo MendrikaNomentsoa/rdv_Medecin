@@ -4,7 +4,9 @@ import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import com.rdv.model.Medecin;
 import com.rdv.model.Patient;
+import com.rdv.service.MedecinService;
 import com.rdv.service.PatientService;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -52,12 +54,12 @@ public class PatientServlet extends HttpServlet {
             case "edit":
                 String idEdit = req.getParameter("id");
                 if (idEdit == null || idEdit.isEmpty()) {
-                    resp.sendRedirect(req.getContextPath() + "/patient?action=liste");
+                    resp.sendRedirect(req.getContextPath() + "/patient?action=dashboard");
                     return;
                 }
                 Patient patient = patientService.trouverParId(idEdit);
                 if (patient == null) {
-                    resp.sendRedirect(req.getContextPath() + "/patient?action=liste");
+                    resp.sendRedirect(req.getContextPath() + "/patient?action=dashboard");
                     return;
                 }
                 req.setAttribute("patient", patient);
@@ -70,8 +72,16 @@ public class PatientServlet extends HttpServlet {
                 resp.sendRedirect(req.getContextPath() + "/patient?action=liste");
                 break;
 
+            case "top5":
+                System.out.println("[PatientServlet] Affichage Top 5 médecins");
+                MedecinService medecinService = new MedecinService();
+                List<Medecin> top5 = medecinService.top5PlusConsultes();
+                req.setAttribute("top5", top5);
+                req.getRequestDispatcher("/views/patient/top5.jsp").forward(req, resp);
+                break;
+
             default:
-                resp.sendRedirect(req.getContextPath() + "/patient?action=liste");
+                resp.sendRedirect(req.getContextPath() + "/patient?action=dashboard");
         }
     }
 
@@ -138,7 +148,7 @@ public class PatientServlet extends HttpServlet {
             return;
         }
 
-        resp.sendRedirect(req.getContextPath() + "/patient?action=liste");
+        resp.sendRedirect(req.getContextPath() + "/patient?action=dashboard");
     }
 
     private void afficherDashboard(HttpServletRequest req, HttpServletResponse resp)
