@@ -49,6 +49,12 @@ public class AuthFilter implements Filter {
             "/views/medecin/top5.jsp"
     };
 
+    // Pages accessibles à tous les utilisateurs connectés (peu importe le rôle)
+    private static final String[] PAGES_ACCESSIBLES_TOUS = {
+            "/calendar",
+            "/views/shared/calendar.jsp"
+    };
+
     @Override
     public void doFilter(ServletRequest request, ServletResponse response,
                          FilterChain chain) throws IOException, ServletException {
@@ -85,6 +91,15 @@ public class AuthFilter implements Filter {
         String idUtilisateur = (String) session.getAttribute("idUtilisateur");
 
         System.out.println("[AuthFilter] Connecté - Rôle: " + role + ", Chemin: " + cheminComplet);
+
+        // ✅ Vérification PRIORITAIRE pour les pages accessibles à tous les utilisateurs connectés
+        for (String page : PAGES_ACCESSIBLES_TOUS) {
+            if (chemin.startsWith(page) || chemin.equals(page)) {
+                System.out.println("[AuthFilter] Page accessible à tous: " + page);
+                chain.doFilter(request, response);
+                return;
+            }
+        }
 
         // ✅ Vérification PRIORITAIRE pour les pages accessibles aux patients
         for (String page : PAGES_ACCESSIBLES_PATIENT) {

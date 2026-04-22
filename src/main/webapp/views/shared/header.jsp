@@ -37,10 +37,8 @@
             --alert-success-bg: #e6f4ea;
             --alert-success-text: #137333;
             --sidebar-header-bg: linear-gradient(135deg, #1a73e8, #0d47a1);
-            --stat-card-1: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            --stat-card-2: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-            --stat-card-3: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            --stat-card-4: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            --skeleton-base: #e0e0e0;
+            --skeleton-highlight: #f0f0f0;
         }
 
         /* ===== THÈME SOMBRE ===== */
@@ -73,10 +71,8 @@
             --alert-success-bg: #1a2a1a;
             --alert-success-text: #4ade80;
             --sidebar-header-bg: linear-gradient(135deg, #0d47a1, #061b3a);
-            --stat-card-1: linear-gradient(135deg, #4a3a7a 0%, #5a3a7a 100%);
-            --stat-card-2: linear-gradient(135deg, #0a5a4a 0%, #2a7a5a 100%);
-            --stat-card-3: linear-gradient(135deg, #7a3a5a 0%, #8a3a6a 100%);
-            --stat-card-4: linear-gradient(135deg, #2a5a7a 0%, #3a6a8a 100%);
+            --skeleton-base: #2a2a4a;
+            --skeleton-highlight: #3a3a5a;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -86,6 +82,67 @@
             color: var(--text-primary);
             overflow-x: hidden;
             transition: background 0.3s ease, color 0.3s ease;
+        }
+
+        /* ===== SKELETON LOADER (optimisé pour rapidité) ===== */
+        .skeleton {
+            background: linear-gradient(90deg, var(--skeleton-base) 25%, var(--skeleton-highlight) 50%, var(--skeleton-base) 75%);
+            background-size: 200% 100%;
+            animation: skeletonLoading 0.8s infinite ease-in-out;
+            border-radius: 8px;
+        }
+
+        @keyframes skeletonLoading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        .skeleton-text {
+            height: 16px;
+            margin: 8px 0;
+            border-radius: 4px;
+        }
+
+        .skeleton-title {
+            height: 24px;
+            width: 60%;
+            border-radius: 6px;
+        }
+
+        .skeleton-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+        }
+
+        .skeleton-card {
+            padding: 20px;
+            background: var(--bg-card);
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+
+        .skeleton-stat {
+            height: 80px;
+            width: 100%;
+            border-radius: 12px;
+        }
+
+        /* Hide content while loading */
+        .content-loaded {
+            display: block;
+        }
+
+        .skeleton-container {
+            display: none;
+        }
+
+        body.loading .content-loaded {
+            display: none;
+        }
+
+        body.loading .skeleton-container {
+            display: block;
         }
 
         /* ===== LAYOUT PRINCIPAL FLEXBOX ===== */
@@ -152,7 +209,6 @@
             overflow: hidden;
         }
 
-        /* Effet de fond glissant pour les liens */
         .sidebar-link::before {
             content: '';
             position: absolute;
@@ -173,7 +229,6 @@
             border-left-color: #1a73e8;
         }
 
-        /* Animation des icônes au survol */
         .sidebar-icon {
             font-size: 22px;
             width: 30px;
@@ -206,11 +261,11 @@
             overflow-x: auto;
         }
 
-        /* Animation d'entrée du contenu */
+        /* Animation d'entrée du contenu (accélérée) */
         @keyframes fadeInUp {
             from {
                 opacity: 0;
-                transform: translateY(20px);
+                transform: translateY(10px);
             }
             to {
                 opacity: 1;
@@ -219,14 +274,8 @@
         }
 
         .card, .stat-card {
-            animation: fadeInUp 0.5s ease-out forwards;
+            animation: fadeInUp 0.2s ease-out forwards;
         }
-
-        /* Délais d'animation pour les cartes */
-        .card:nth-child(1) { animation-delay: 0.1s; }
-        .card:nth-child(2) { animation-delay: 0.2s; }
-        .card:nth-child(3) { animation-delay: 0.3s; }
-        .card:nth-child(4) { animation-delay: 0.4s; }
 
         /* ===== HEADER DANS LE CONTENU ===== */
         .content-header {
@@ -248,7 +297,6 @@
             gap: 20px;
         }
 
-        /* Bouton HOME (menu toggle) dans le header */
         .menu-toggle-btn {
             background: rgba(255,255,255,0.2);
             border: none;
@@ -269,7 +317,6 @@
             transform: scale(1.05) rotate(90deg);
         }
 
-        /* Bouton Dark Mode Toggle */
         .dark-mode-toggle {
             background: rgba(255,255,255,0.2);
             border: none;
@@ -335,20 +382,19 @@
             padding: 0 25px 40px;
         }
 
-        /* ===== CARTES AVEC ANIMATIONS ===== */
+        /* ===== CARTES ===== */
         .card {
             background: var(--bg-card);
             border-radius: 12px;
             padding: 24px;
             box-shadow: 0 2px 12px var(--shadow-color);
             margin-bottom: 20px;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 12px 28px var(--shadow-hover);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px var(--shadow-hover);
         }
 
         .card-title {
@@ -361,13 +407,12 @@
             transition: border-color 0.3s ease;
         }
 
-        /* Cartes statistiques avec dégradés */
         .stat-card {
             background: var(--bg-card);
             border-radius: 12px;
             padding: 24px;
             text-align: center;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             cursor: pointer;
             position: relative;
             overflow: hidden;
@@ -391,29 +436,29 @@
         }
 
         .stat-card:hover {
-            transform: translateY(-8px);
-            box-shadow: 0 15px 35px var(--shadow-hover);
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px var(--shadow-hover);
         }
 
         .stat-card .stat-icon {
             font-size: 40px;
             margin-bottom: 10px;
-            transition: transform 0.3s ease;
+            transition: transform 0.2s ease;
         }
 
         .stat-card:hover .stat-icon {
-            transform: scale(1.1);
+            transform: scale(1.05);
         }
 
         .stat-card .stat-number {
             font-size: 32px;
             font-weight: bold;
             color: #1a73e8;
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
         }
 
         .stat-card:hover .stat-number {
-            transform: scale(1.05);
+            transform: scale(1.02);
         }
 
         .stat-card .stat-label {
@@ -422,39 +467,7 @@
             margin-top: 5px;
         }
 
-        /* Cartes de médecin dans la recherche */
-        .doctor-card {
-            background: var(--bg-card);
-            border-radius: 12px;
-            padding: 20px;
-            border: 1px solid var(--border-color);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            cursor: pointer;
-        }
-
-        .doctor-card:hover {
-            transform: translateY(-5px) scale(1.02);
-            box-shadow: 0 15px 35px var(--shadow-hover);
-            border-color: #1a73e8;
-        }
-
-        /* Animation de pulse pour les badges */
-        @keyframes pulse {
-            0% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.05); opacity: 0.8; }
-            100% { transform: scale(1); opacity: 1; }
-        }
-
-        .badge-success, .badge-danger {
-            transition: all 0.2s ease;
-            display: inline-block;
-        }
-
-        .badge-success:hover, .badge-danger:hover {
-            animation: pulse 0.5s ease;
-        }
-
-        /* ===== BOUTONS AVEC EFFET RIPPLE ===== */
+        /* ===== BOUTONS ===== */
         .btn {
             display: inline-block;
             padding: 9px 18px;
@@ -464,12 +477,11 @@
             text-decoration: none;
             border: none;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.15s ease;
             position: relative;
             overflow: hidden;
         }
 
-        /* Effet ripple */
         .btn::after {
             content: '';
             position: absolute;
@@ -480,7 +492,7 @@
             background: rgba(255,255,255,0.3);
             border-radius: 50%;
             transform: translate(-50%, -50%);
-            transition: width 0.5s, height 0.5s;
+            transition: width 0.3s, height 0.3s;
         }
 
         .btn:active::after {
@@ -503,7 +515,7 @@
         .btn-warning { background: var(--btn-warning); color: #333; }
         .btn-secondary { background: var(--btn-secondary); color: white; }
 
-        /* ===== TABLEAUX AVEC ANIMATION ===== */
+        /* ===== TABLEAUX ===== */
         table {
             width: 100%;
             border-collapse: collapse;
@@ -519,14 +531,10 @@
         td {
             padding: 11px 14px;
             border-bottom: 1px solid var(--border-light);
-            transition: all 0.2s ease;
-        }
-        tr {
-            transition: all 0.2s ease;
+            transition: all 0.15s ease;
         }
         tr:hover td {
             background: var(--hover-bg);
-            transform: scale(1.01);
         }
 
         /* ===== FORMULAIRES ===== */
@@ -549,22 +557,21 @@
             font-size: 14px;
             background: var(--bg-card);
             color: var(--text-primary);
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
         }
         .form-group input:focus, .form-group select:focus {
             outline: none;
             border-color: var(--input-focus);
             box-shadow: 0 0 0 3px rgba(26,115,232,0.2);
-            transform: translateY(-2px);
         }
 
-        /* ===== ALERTES AVEC ANIMATION ===== */
+        /* ===== ALERTES ===== */
         .alert {
             padding: 12px 16px;
             border-radius: 8px;
             margin-bottom: 16px;
             font-size: 14px;
-            animation: fadeInUp 0.4s ease-out;
+            animation: fadeInUp 0.2s ease-out;
         }
         .alert-danger {
             background: var(--alert-danger-bg);
@@ -583,12 +590,12 @@
             border-radius: 20px;
             font-size: 12px;
             font-weight: 600;
-            transition: all 0.2s ease;
+            transition: all 0.15s ease;
         }
         .badge-success { background: var(--badge-success-bg); color: var(--badge-success-text); }
         .badge-danger { background: var(--badge-danger-bg); color: var(--badge-danger-text); }
 
-        /* ===== TOP 5 MÉDECINS - CARTES SPÉCIALES ===== */
+        /* ===== TOP 5 MÉDECINS ===== */
         .top5-card {
             display: flex;
             align-items: center;
@@ -596,13 +603,13 @@
             padding: 16px;
             border-radius: 12px;
             margin-bottom: 12px;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             cursor: pointer;
         }
 
         .top5-card:hover {
-            transform: translateX(8px);
-            box-shadow: 0 8px 25px var(--shadow-hover);
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px var(--shadow-hover);
         }
 
         .medal {
@@ -616,11 +623,44 @@
             font-weight: 700;
             font-size: 22px;
             flex-shrink: 0;
-            transition: transform 0.3s ease;
+            transition: transform 0.2s ease;
         }
 
         .top5-card:hover .medal {
-            transform: scale(1.1) rotate(5deg);
+            transform: scale(1.05) rotate(3deg);
+        }
+
+        /* ===== LOADER PLEIN ÉCRAN ===== */
+        .fullscreen-loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--bg-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            transition: opacity 0.2s ease, visibility 0.2s ease;
+        }
+
+        .fullscreen-loader.hidden {
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .loader-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border-color);
+            border-top-color: #1a73e8;
+            border-radius: 50%;
+            animation: spin 0.5s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
 
         /* ===== RESPONSIVE ===== */
@@ -653,20 +693,19 @@
                 height: 42px;
                 font-size: 20px;
             }
-            .card:hover {
-                transform: translateY(-3px);
-            }
-            .stat-card:hover {
-                transform: translateY(-5px);
-            }
         }
     </style>
 </head>
 <body>
 
+<!-- Fullscreen Loader -->
+<div class="fullscreen-loader" id="fullscreenLoader">
+    <div class="loader-spinner"></div>
+</div>
+
 <div class="app-wrapper">
 
-    <!-- SIDEBAR (colonne gauche) - CACHÉ PAR DÉFAUT -->
+    <!-- SIDEBAR -->
     <div class="sidebar" id="sidebar">
         <div class="sidebar-header">
             <h3>🏥 RDV Medical</h3>
@@ -688,6 +727,10 @@
                         <span class="sidebar-icon">📋</span>
                         <span class="sidebar-text">Mes rendez-vous</span>
                     </a>
+                    <a href="${pageContext.request.contextPath}/calendar" class="sidebar-link">
+                        <span class="sidebar-icon">📅</span>
+                        <span class="sidebar-text">Calendrier</span>
+                    </a>
                     <a href="${pageContext.request.contextPath}/patient?action=top5" class="sidebar-link">
                         <span class="sidebar-icon">🏆</span>
                         <span class="sidebar-text">Top 5 médecins</span>
@@ -705,6 +748,10 @@
                     <a href="${pageContext.request.contextPath}/rdv?action=liste" class="sidebar-link">
                         <span class="sidebar-icon">📋</span>
                         <span class="sidebar-text">Mes rendez-vous</span>
+                    </a>
+                    <a href="${pageContext.request.contextPath}/calendar" class="sidebar-link">
+                        <span class="sidebar-icon">📅</span>
+                        <span class="sidebar-text">Calendrier</span>
                     </a>
                     <a href="${pageContext.request.contextPath}/patient?action=liste" class="sidebar-link">
                         <span class="sidebar-icon">👥</span>
@@ -730,10 +777,10 @@
         </div>
     </div>
 
-    <!-- CONTENU PRINCIPAL (colonne droite) -->
+    <!-- CONTENU PRINCIPAL -->
     <div class="main-content" id="mainContent">
 
-        <!-- Header dans le contenu avec le bouton HOME et Dark Mode Toggle -->
+        <!-- Header -->
         <div class="content-header">
             <div class="header-left">
                 <button class="menu-toggle-btn" id="menuToggleBtn">☰</button>
@@ -772,6 +819,14 @@
         </div>
 
 <script>
+    // ===== FULLSCREEN LOADER (disparaît plus vite) =====
+    window.addEventListener('load', function() {
+        const loader = document.getElementById('fullscreenLoader');
+        setTimeout(function() {
+            loader.classList.add('hidden');
+        }, 200);
+    });
+
     // ===== DARK MODE TOGGLE =====
     const darkModeToggle = document.getElementById('darkModeToggleBtn');
     const body = document.body;
@@ -802,20 +857,6 @@
 
     if (darkModeToggle) {
         darkModeToggle.addEventListener('click', toggleDarkMode);
-    }
-
-    if (window.matchMedia) {
-        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
-            if (!localStorage.getItem('darkMode')) {
-                if (e.matches) {
-                    body.classList.add('dark-mode');
-                    if (darkModeToggle) darkModeToggle.innerHTML = '☀️';
-                } else {
-                    body.classList.remove('dark-mode');
-                    if (darkModeToggle) darkModeToggle.innerHTML = '🌙';
-                }
-            }
-        });
     }
 
     // ===== SIDEBAR TOGGLE =====
@@ -854,30 +895,6 @@
                 sidebarVisible = false;
                 localStorage.setItem('sidebarVisible', 'false');
             }
-        });
-    });
-
-    document.addEventListener('click', function(event) {
-        if (sidebarVisible && window.innerWidth <= 768) {
-            if (!sidebar.contains(event.target) && event.target !== menuToggleBtn && !menuToggleBtn.contains(event.target)) {
-                sidebar.classList.remove('visible');
-                sidebarVisible = false;
-                localStorage.setItem('sidebarVisible', 'false');
-            }
-        }
-    });
-
-    // ===== ANIMATION D'ENTRÉE DES CARTES =====
-    // Ajouter des classes d'animation aux cartes
-    document.addEventListener('DOMContentLoaded', function() {
-        const cards = document.querySelectorAll('.card');
-        cards.forEach((card, index) => {
-            card.style.animationDelay = (index * 0.1) + 's';
-        });
-
-        const statCards = document.querySelectorAll('.stat-card');
-        statCards.forEach((card, index) => {
-            card.style.animationDelay = (index * 0.1) + 's';
         });
     });
 </script>
