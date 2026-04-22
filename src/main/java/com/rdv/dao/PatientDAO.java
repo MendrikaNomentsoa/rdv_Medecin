@@ -7,21 +7,15 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 import com.rdv.model.Patient;
 import com.rdv.util.DBConnection;
 
-/**
- * DAO pour la table PATIENT.
- * Toutes les requêtes SQL liées aux patients sont ici.
- */
 public class PatientDAO {
 
-    // ── CREATE ───────────────────────────────────────────────────────────────
-
     public boolean inserer(Patient patient) {
-        String sql = "INSERT INTO patient (nom_pat, datenais, email, mot_de_passe) " +
-                     "VALUES (?, ?, ?, ?)";
+        String sql = "INSERT INTO patient (nom_pat, datenais, email, mot_de_passe) VALUES (?, ?, ?, ?)";
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -29,7 +23,7 @@ public class PatientDAO {
             ps.setString(1, patient.getNomPat());
             ps.setDate(2, Date.valueOf(patient.getDatenais()));
             ps.setString(3, patient.getEmail());
-            ps.setString(4, patient.getMotDePasse()); // déjà hashé en bcrypt
+            ps.setString(4, patient.getMotDePasse());
 
             return ps.executeUpdate() == 1;
 
@@ -38,8 +32,6 @@ public class PatientDAO {
             return false;
         }
     }
-
-    // ── READ ─────────────────────────────────────────────────────────────────
 
     public List<Patient> listerTous() {
         List<Patient> liste = new ArrayList<>();
@@ -60,14 +52,22 @@ public class PatientDAO {
     }
 
     public Patient trouverParId(String idpat) {
-        String sql = "SELECT idpat, nom_pat, datenais, email FROM patient WHERE idpat = ?";
+        String sql = "SELECT idpat, nom_pat, datenais, email FROM patient WHERE idpat::text = ?";
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
 
+            try {
+                UUID.fromString(idpat);
+            } catch (IllegalArgumentException e) {
+                return null;
+            }
+
             ps.setString(1, idpat);
             try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) return mapper(rs);
+                if (rs.next()) {
+                    return mapper(rs);
+                }
             }
 
         } catch (SQLException e) {
@@ -77,8 +77,7 @@ public class PatientDAO {
     }
 
     public Patient trouverParEmail(String email) {
-        String sql = "SELECT idpat, nom_pat, datenais, email, mot_de_passe " +
-                     "FROM patient WHERE email = ?";
+        String sql = "SELECT idpat, nom_pat, datenais, email, mot_de_passe FROM patient WHERE email = ?";
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -98,11 +97,14 @@ public class PatientDAO {
         return null;
     }
 
-    // ── UPDATE ───────────────────────────────────────────────────────────────
-
     public boolean modifier(Patient patient) {
-        String sql = "UPDATE patient SET nom_pat = ?, datenais = ?, email = ? " +
-                     "WHERE idpat = ?";
+        String sql = "UPDATE patient SET nom_pat = ?, datenais = ?, email = ? WHERE idpat::text = ?";
+
+        try {
+            UUID.fromString(patient.getIdpat());
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -120,10 +122,14 @@ public class PatientDAO {
         }
     }
 
-    // ── DELETE ───────────────────────────────────────────────────────────────
-
     public boolean supprimer(String idpat) {
-        String sql = "DELETE FROM patient WHERE idpat = ?";
+        String sql = "DELETE FROM patient WHERE idpat::text = ?";
+
+        try {
+            UUID.fromString(idpat);
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -137,17 +143,21 @@ public class PatientDAO {
         }
     }
 
-    // ── MAPPER ───────────────────────────────────────────────────────────────
-
-    /**
-     * Convertit une ligne du ResultSet en objet Patient.
-     * Utilisé par toutes les méthodes de lecture.
-     */
     private Patient mapper(ResultSet rs) throws SQLException {
         Patient p = new Patient();
-        p.setIdpat(rs.getString("idpat"));
+
+        Object idObj = rs.getObject("idpat");
+        if (idObj != null) {
+            p.setIdpat(idObj.toString());
+        }
+
         p.setNomPat(rs.getString("nom_pat"));
-        p.setDatenais(rs.getDate("datenais").toLocalDate());
+
+        Date sqlDate = rs.getDate("datenais");
+        if (sqlDate != null) {
+            p.setDatenais(sqlDate.toLocalDate());
+        }
+
         p.setEmail(rs.getString("email"));
         return p;
     }

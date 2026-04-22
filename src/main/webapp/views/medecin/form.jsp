@@ -71,10 +71,23 @@
                         <c:otherwise>Créer le médecin</c:otherwise>
                     </c:choose>
                 </button>
-                <a href="${pageContext.request.contextPath}/medecin?action=liste"
-                   class="btn btn-secondary" style="flex:1; text-align:center;">
-                    Annuler
-                </a>
+
+                <c:choose>
+                    <c:when test="${sessionScope.role == 'medecin' and not empty medecin}">
+                        <%-- Médecin qui modifie son propre profil → retour au dashboard --%>
+                        <a href="${pageContext.request.contextPath}/medecin?action=dashboard"
+                           class="btn btn-secondary" style="flex:1; text-align:center;">
+                            Annuler
+                        </a>
+                    </c:when>
+                    <c:otherwise>
+                        <%-- Admin ou création d'un nouveau médecin → retour à la liste --%>
+                        <a href="${pageContext.request.contextPath}/medecin?action=liste"
+                           class="btn btn-secondary" style="flex:1; text-align:center;">
+                            Annuler
+                        </a>
+                    </c:otherwise>
+                </c:choose>
             </div>
         </form>
     </div>
