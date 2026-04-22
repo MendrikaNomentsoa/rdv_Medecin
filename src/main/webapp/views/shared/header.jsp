@@ -401,10 +401,6 @@
                     <span class="sidebar-icon">👤</span>
                     <span class="sidebar-text">Mon profil</span>
                 </a>
-                <a href="${pageContext.request.contextPath}/patient?action=medecins-consultes" class="sidebar-link">
-                    <span class="sidebar-icon">👨‍⚕️</span>
-                    <span class="sidebar-text">Médecins consultés</span>
-                </a>
             </c:when>
             <c:when test="${sessionScope.role == 'medecin'}">
                 <a href="${pageContext.request.contextPath}/medecin?action=dashboard" class="sidebar-link">

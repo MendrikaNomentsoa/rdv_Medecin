@@ -23,16 +23,26 @@ public class AuthFilter implements Filter {
             "/auth",
             "/index.jsp",
             "/css/",
-            "/js/"
+            "/js/",
+            ".css",
+            ".js",
+            ".png",
+            ".jpg",
+            ".jpeg",
+            ".gif"
     };
 
-    private static final String[] PAGES_MEDECIN = {
-            "/patient",
-            "/medecin",
-            "/views/patient/list.jsp",
+    // Pages réservées aux médecins SEULEMENT
+    private static final String[] PAGES_RESERVEES_MEDECIN = {
+            "/medecin?action=liste",
+            "/medecin?action=form",
+            "/medecin?action=edit",
+            "/medecin?action=supprimer",
+            "/medecin?action=top5",
             "/views/medecin/list.jsp",
             "/views/medecin/form.jsp",
-            "/views/medecin/top5.jsp"
+            "/views/medecin/top5.jsp",
+            "/views/patient/list.jsp"
     };
 
     @Override
@@ -45,8 +55,12 @@ public class AuthFilter implements Filter {
         String chemin = req.getRequestURI().substring(req.getContextPath().length());
         String method = req.getMethod();
 
+        System.out.println("[AuthFilter] Chemin demandé: " + chemin);
+
+        // Vérifier si la page est publique
         for (String page : PAGES_PUBLIQUES) {
-            if (chemin.startsWith(page)) {
+            if (chemin.startsWith(page) || chemin.endsWith(page)) {
+                System.out.println("[AuthFilter] Page publique: " + chemin);
                 chain.doFilter(request, response);
                 return;
             }
@@ -56,6 +70,7 @@ public class AuthFilter implements Filter {
         boolean connecte = (session != null && session.getAttribute("utilisateur") != null);
 
         if (!connecte) {
+            System.out.println("[AuthFilter] Non connecté - redirection login");
             resp.sendRedirect(req.getContextPath() + "/views/shared/login.jsp");
             return;
         }
@@ -63,30 +78,78 @@ public class AuthFilter implements Filter {
         String role = (String) session.getAttribute("role");
         String idUtilisateur = (String) session.getAttribute("idUtilisateur");
 
-        for (String page : PAGES_MEDECIN) {
+        System.out.println("[AuthFilter] Connecté - Rôle: " + role + ", Chemin: " + chemin);
+
+        // ✅ Rediriger les accès directs aux JSP vers les servlets
+        if (chemin.endsWith(".jsp") && !chemin.startsWith("/views/shared/")) {
+            System.out.println("[AuthFilter] Accès direct JSP détecté: " + chemin + " - Redirection vers servlet");
+            if ("patient".equals(role)) {
+                resp.sendRedirect(req.getContextPath() + "/patient?action=dashboard");
+                return;
+            } else if ("medecin".equals(role)) {
+                resp.sendRedirect(req.getContextPath() + "/medecin?action=dashboard");
+                return;
+            }
+        }
+
+        // ✅ Vérifier les pages réservées aux médecins
+        for (String page : PAGES_RESERVEES_MEDECIN) {
             if (chemin.startsWith(page)) {
                 if (!"medecin".equals(role)) {
-
-                    // Exception : patient modifie son propre profil
-                    if (chemin.startsWith("/patient") && "edit".equals(req.getParameter("action"))
-                            && idUtilisateur != null && idUtilisateur.equals(req.getParameter("id"))) {
-                        chain.doFilter(request, response);
-                        return;
+                    System.out.println("[AuthFilter] Page réservée médecin - Accès refusé pour " + role);
+                    if ("patient".equals(role)) {
+                        resp.sendRedirect(req.getContextPath() + "/patient?action=dashboard");
+                    } else {
+                        resp.sendRedirect(req.getContextPath() + "/views/shared/login.jsp");
                     }
-
-                    // Exception : POST pour enregistrer les modifications
-                    if (chemin.startsWith("/patient") && "POST".equalsIgnoreCase(method)
-                            && "enregistrer".equals(req.getParameter("action"))) {
-                        chain.doFilter(request, response);
-                        return;
-                    }
-
-                    resp.sendRedirect(req.getContextPath() + "/views/patient/dashboard.jsp");
                     return;
                 }
             }
         }
 
+        // ✅ Vérifier spécifiquement /medecin (le servlet lui-même)
+        if (chemin.startsWith("/medecin") && !"medecin".equals(role)) {
+            System.out.println("[AuthFilter] Accès à /medecin refusé pour " + role);
+            if ("patient".equals(role)) {
+                resp.sendRedirect(req.getContextPath() + "/patient?action=dashboard");
+            } else {
+                resp.sendRedirect(req.getContextPath() + "/views/shared/login.jsp");
+            }
+            return;
+        }
+
+        // ✅ Pour /patient, tout le monde peut y accéder (c'est le dashboard patient)
+        // Mais on vérifie quand même que c'est un patient
+        if (chemin.startsWith("/patient") && !"patient".equals(role) && !"medecin".equals(role)) {
+            System.out.println("[AuthFilter] Accès à /patient refusé - rôle invalide: " + role);
+            resp.sendRedirect(req.getContextPath() + "/views/shared/login.jsp");
+            return;
+        }
+
+        // ✅ Exception spéciale: médecin qui veut voir la liste des patients
+        if (chemin.startsWith("/patient") && chemin.contains("action=liste") && "medecin".equals(role)) {
+            System.out.println("[AuthFilter] Médecin accède à la liste des patients - autorisé");
+            chain.doFilter(request, response);
+            return;
+        }
+
+        // ✅ Exception: patient modifie son propre profil
+        if (chemin.startsWith("/patient") && "edit".equals(req.getParameter("action"))
+                && idUtilisateur != null && idUtilisateur.equals(req.getParameter("id"))) {
+            System.out.println("[AuthFilter] Exception: patient modifie son propre profil");
+            chain.doFilter(request, response);
+            return;
+        }
+
+        // ✅ Exception: POST pour enregistrer les modifications
+        if (chemin.startsWith("/patient") && "POST".equalsIgnoreCase(method)
+                && "enregistrer".equals(req.getParameter("action"))) {
+            System.out.println("[AuthFilter] Exception: POST enregistrement patient");
+            chain.doFilter(request, response);
+            return;
+        }
+
+        System.out.println("[AuthFilter] Accès autorisé - suite de la chaîne");
         chain.doFilter(request, response);
     }
 }
