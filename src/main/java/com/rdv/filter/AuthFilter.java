@@ -38,11 +38,21 @@ public class AuthFilter implements Filter {
             "/medecin?action=form",
             "/medecin?action=edit",
             "/medecin?action=supprimer",
-            "/medecin?action=top5",
             "/views/medecin/list.jsp",
             "/views/medecin/form.jsp",
-            "/views/medecin/top5.jsp",
             "/views/patient/list.jsp"
+    };
+
+    // Pages accessibles aux patients (dans /medecin)
+    private static final String[] PAGES_ACCESSIBLES_PATIENT = {
+            "/medecin?action=top5",
+            "/views/medecin/top5.jsp"
+    };
+
+    // Pages accessibles à tous les utilisateurs connectés (peu importe le rôle)
+    private static final String[] PAGES_ACCESSIBLES_TOUS = {
+            "/calendar",
+            "/views/shared/calendar.jsp"
     };
 
     @Override
@@ -53,9 +63,11 @@ public class AuthFilter implements Filter {
         HttpServletResponse resp = (HttpServletResponse) response;
 
         String chemin = req.getRequestURI().substring(req.getContextPath().length());
+        String queryString = req.getQueryString();
+        String cheminComplet = chemin + (queryString != null ? "?" + queryString : "");
         String method = req.getMethod();
 
-        System.out.println("[AuthFilter] Chemin demandé: " + chemin);
+        System.out.println("[AuthFilter] Chemin demandé: " + cheminComplet);
 
         // Vérifier si la page est publique
         for (String page : PAGES_PUBLIQUES) {
@@ -78,7 +90,26 @@ public class AuthFilter implements Filter {
         String role = (String) session.getAttribute("role");
         String idUtilisateur = (String) session.getAttribute("idUtilisateur");
 
-        System.out.println("[AuthFilter] Connecté - Rôle: " + role + ", Chemin: " + chemin);
+        System.out.println("[AuthFilter] Connecté - Rôle: " + role + ", Chemin: " + cheminComplet);
+
+        // ✅ Vérification PRIORITAIRE pour les pages accessibles à tous les utilisateurs connectés
+        for (String page : PAGES_ACCESSIBLES_TOUS) {
+            if (chemin.startsWith(page) || chemin.equals(page)) {
+                System.out.println("[AuthFilter] Page accessible à tous: " + page);
+                chain.doFilter(request, response);
+                return;
+            }
+        }
+
+        // ✅ Vérification PRIORITAIRE pour les pages accessibles aux patients
+        for (String page : PAGES_ACCESSIBLES_PATIENT) {
+            if (cheminComplet.startsWith(page) || chemin.equals(page) ||
+                    (chemin.startsWith("/views/medecin/top5.jsp"))) {
+                System.out.println("[AuthFilter] Page accessible aux patients: " + page);
+                chain.doFilter(request, response);
+                return;
+            }
+        }
 
         // ✅ Rediriger les accès directs aux JSP vers les servlets
         if (chemin.endsWith(".jsp") && !chemin.startsWith("/views/shared/")) {
@@ -94,7 +125,8 @@ public class AuthFilter implements Filter {
 
         // ✅ Vérifier les pages réservées aux médecins
         for (String page : PAGES_RESERVEES_MEDECIN) {
-            if (chemin.startsWith(page)) {
+            if (cheminComplet.startsWith(page) ||
+                    (chemin.startsWith(page) && !page.contains("?"))) {
                 if (!"medecin".equals(role)) {
                     System.out.println("[AuthFilter] Page réservée médecin - Accès refusé pour " + role);
                     if ("patient".equals(role)) {
@@ -107,15 +139,18 @@ public class AuthFilter implements Filter {
             }
         }
 
-        // ✅ Vérifier spécifiquement /medecin (le servlet lui-même)
-        if (chemin.startsWith("/medecin") && !"medecin".equals(role)) {
-            System.out.println("[AuthFilter] Accès à /medecin refusé pour " + role);
-            if ("patient".equals(role)) {
-                resp.sendRedirect(req.getContextPath() + "/patient?action=dashboard");
-            } else {
-                resp.sendRedirect(req.getContextPath() + "/views/shared/login.jsp");
+        // ✅ Vérification spécifique pour /medecin
+        if (chemin.startsWith("/medecin")) {
+            // Si ce n'est pas top5, seul le médecin peut accéder
+            if (!"medecin".equals(role)) {
+                System.out.println("[AuthFilter] Accès à /medecin refusé pour " + role);
+                if ("patient".equals(role)) {
+                    resp.sendRedirect(req.getContextPath() + "/patient?action=dashboard");
+                } else {
+                    resp.sendRedirect(req.getContextPath() + "/views/shared/login.jsp");
+                }
+                return;
             }
-            return;
         }
 
         // ✅ Pour /patient, tout le monde peut y accéder (c'est le dashboard patient)
@@ -127,14 +162,14 @@ public class AuthFilter implements Filter {
         }
 
         // ✅ Exception spéciale: médecin qui veut voir la liste des patients
-        if (chemin.startsWith("/patient") && chemin.contains("action=liste") && "medecin".equals(role)) {
+        if (chemin.startsWith("/patient") && queryString != null && queryString.contains("action=liste") && "medecin".equals(role)) {
             System.out.println("[AuthFilter] Médecin accède à la liste des patients - autorisé");
             chain.doFilter(request, response);
             return;
         }
 
         // ✅ Exception: patient modifie son propre profil
-        if (chemin.startsWith("/patient") && "edit".equals(req.getParameter("action"))
+        if (chemin.startsWith("/patient") && queryString != null && queryString.contains("action=edit")
                 && idUtilisateur != null && idUtilisateur.equals(req.getParameter("id"))) {
             System.out.println("[AuthFilter] Exception: patient modifie son propre profil");
             chain.doFilter(request, response);
