@@ -14,7 +14,15 @@ import com.rdv.util.DBConnection;
 
 public class PatientDAO {
 
+    // ── CREATE ───────────────────────────────────────────────────────────────
+
     public boolean inserer(Patient patient) {
+        // Vérifier si l'email existe déjà
+        if (emailExiste(patient.getEmail())) {
+            System.err.println("[PatientDAO] L'email " + patient.getEmail() + " est déjà utilisé par un autre compte");
+            return false;
+        }
+
         String sql = "INSERT INTO patient (nom_pat, datenais, email, mot_de_passe) VALUES (?, ?, ?, ?)";
 
         try (Connection conn = DBConnection.getConnection();
@@ -32,6 +40,89 @@ public class PatientDAO {
             return false;
         }
     }
+
+    // ── VÉRIFICATION EMAIL ───────────────────────────────────────────────────
+
+    /**
+     * Vérifie si un email existe déjà chez les patients ou les médecins
+     */
+    public boolean emailExiste(String email) {
+        if (email == null || email.isEmpty()) {
+            return false;
+        }
+
+        String sqlPatient = "SELECT COUNT(*) FROM patient WHERE email = ?";
+        String sqlMedecin = "SELECT COUNT(*) FROM medecin WHERE email = ?";
+        
+        try (Connection conn = DBConnection.getConnection()) {
+            // Vérifier chez les patients
+            try (PreparedStatement ps = conn.prepareStatement(sqlPatient)) {
+                ps.setString(1, email);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next() && rs.getInt(1) > 0) {
+                        System.out.println("[PatientDAO] Email " + email + " trouvé chez un patient");
+                        return true;
+                    }
+                }
+            }
+            
+            // Vérifier chez les médecins
+            try (PreparedStatement ps = conn.prepareStatement(sqlMedecin)) {
+                ps.setString(1, email);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next() && rs.getInt(1) > 0) {
+                        System.out.println("[PatientDAO] Email " + email + " trouvé chez un médecin");
+                        return true;
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("[PatientDAO] Erreur lors de la vérification de l'email : " + e.getMessage());
+        }
+        return false;
+    }
+
+    /**
+     * Vérifie si un email appartient à un autre patient (pour la modification)
+     */
+    public boolean emailExistePourAutrePatient(String email, String idPatient) {
+        if (email == null || email.isEmpty() || idPatient == null || idPatient.isEmpty()) {
+            return false;
+        }
+
+        String sqlPatient = "SELECT COUNT(*) FROM patient WHERE email = ? AND idpat::text != ?";
+        String sqlMedecin = "SELECT COUNT(*) FROM medecin WHERE email = ?";
+        
+        try (Connection conn = DBConnection.getConnection()) {
+            // Vérifier chez les autres patients
+            try (PreparedStatement ps = conn.prepareStatement(sqlPatient)) {
+                ps.setString(1, email);
+                ps.setString(2, idPatient);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next() && rs.getInt(1) > 0) {
+                        System.out.println("[PatientDAO] Email " + email + " trouvé chez un autre patient");
+                        return true;
+                    }
+                }
+            }
+            
+            // Vérifier chez les médecins
+            try (PreparedStatement ps = conn.prepareStatement(sqlMedecin)) {
+                ps.setString(1, email);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next() && rs.getInt(1) > 0) {
+                        System.out.println("[PatientDAO] Email " + email + " trouvé chez un médecin");
+                        return true;
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("[PatientDAO] Erreur lors de la vérification de l'email : " + e.getMessage());
+        }
+        return false;
+    }
+
+    // ── READ ─────────────────────────────────────────────────────────────────
 
     public List<Patient> listerTous() {
         List<Patient> liste = new ArrayList<>();
@@ -97,14 +188,28 @@ public class PatientDAO {
         return null;
     }
 
+    // ── UPDATE ───────────────────────────────────────────────────────────────
+
     public boolean modifier(Patient patient) {
-        String sql = "UPDATE patient SET nom_pat = ?, datenais = ?, email = ? WHERE idpat::text = ?";
+        if (patient.getIdpat() == null || patient.getIdpat().isEmpty()) {
+            System.err.println("[PatientDAO] ID patient invalide");
+            return false;
+        }
 
         try {
             UUID.fromString(patient.getIdpat());
         } catch (IllegalArgumentException e) {
+            System.err.println("[PatientDAO] ID patient invalide");
             return false;
         }
+
+        // Vérifier si l'email existe déjà chez un autre patient ou chez un médecin
+        if (emailExistePourAutrePatient(patient.getEmail(), patient.getIdpat())) {
+            System.err.println("[PatientDAO] Impossible de modifier: l'email " + patient.getEmail() + " est déjà utilisé par un autre compte");
+            return false;
+        }
+
+        String sql = "UPDATE patient SET nom_pat = ?, datenais = ?, email = ? WHERE idpat::text = ?";
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -122,12 +227,19 @@ public class PatientDAO {
         }
     }
 
+    // ── DELETE ───────────────────────────────────────────────────────────────
+
     public boolean supprimer(String idpat) {
+        if (idpat == null || idpat.isEmpty()) {
+            return false;
+        }
+
         String sql = "DELETE FROM patient WHERE idpat::text = ?";
 
         try {
             UUID.fromString(idpat);
         } catch (IllegalArgumentException e) {
+            System.err.println("[PatientDAO] ID patient invalide");
             return false;
         }
 
@@ -142,6 +254,8 @@ public class PatientDAO {
             return false;
         }
     }
+
+    // ── MAPPER ───────────────────────────────────────────────────────────────
 
     private Patient mapper(ResultSet rs) throws SQLException {
         Patient p = new Patient();
